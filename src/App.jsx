@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Calculator, FlaskConical, Code, MessageSquare, History, User, X, Save, FilePlus, Loader2, UserPlus, AlertTriangle, Pencil, Trash2, Palette, Settings, GraduationCap, Square, SquareAsterisk, SquareDot, SquareEqual, SquarePen, SquareM, PlusCircle, Tag, Upload, Download } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { BookOpen, Calculator, FlaskConical, Code, MessageSquare, History, User, X, Save, FilePlus, Loader2, UserPlus, AlertTriangle, Pencil, Trash2, Palette, Settings, GraduationCap, Square, SquareAsterisk, SquareDot, SquareEqual, SquarePen, SquareM, PlusCircle, Tag, Upload, Download, TrendingUp, TrendingDown, Minus, BarChart2 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, serverTimestamp, query, orderBy, deleteDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
-// import Papa from 'papaparse'; // <-- REMOVED: We will load this from a script tag instead.
+// PapaParse is loaded from a script tag in the main App component
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -47,13 +47,23 @@ const assignmentCategories = {
   final: { label: 'สอบปลายภาค', color: 'bg-rose-500/20 text-rose-300', borderColor: 'border-rose-500/30' },
 };
 
+const analyticsCardStyles = [
+    { gradient: 'from-purple-500/70 to-indigo-500/70', border: 'border-purple-400' },
+    { gradient: 'from-green-500/70 to-teal-500/70', border: 'border-green-400' },
+    { gradient: 'from-pink-500/70 to-rose-500/70', border: 'border-pink-400' },
+    { gradient: 'from-orange-500/70 to-amber-500/70', border: 'border-orange-400' },
+    { gradient: 'from-sky-500/70 to-cyan-500/70', border: 'border-sky-400' },
+    { gradient: 'from-red-500/70 to-orange-500/70', border: 'border-red-400' },
+    { gradient: 'from-yellow-500/70 to-lime-500/70', border: 'border-yellow-400' },
+    { gradient: 'from-fuchsia-500/70 to-purple-500/70', border: 'border-fuchsia-400' },
+];
+
 
 // === MAIN APP COMPONENT ===
 export default function App() {
     const [subjects, setSubjects] = useState([]);
     const [modal, setModal] = useState({ type: null, data: null });
     
-    // Effect to fetch subject metadata from Firestore in real-time.
     useEffect(() => {
         const subjectsMetaPath = `artifacts/${appId}/public/data/subjects_meta`;
         const q = query(collection(db, subjectsMetaPath), orderBy("createdAt"));
@@ -66,10 +76,9 @@ export default function App() {
         return () => unsubscribe();
     }, []);
 
-    // NEW: Effect to load the Papaparse CSV library from a CDN
     useEffect(() => {
         const scriptId = 'papaparse-script';
-        if (document.getElementById(scriptId)) return; // Avoid adding script multiple times
+        if (document.getElementById(scriptId)) return;
         const script = document.createElement('script');
         script.id = scriptId;
         script.src = "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js";
@@ -78,7 +87,6 @@ export default function App() {
     }, []);
 
 
-    // Handlers for managing modal states.
     const handleCardClick = (subject) => setModal({ type: 'selectGrade', data: subject });
     const handleGradeSelect = (subject, grade) => setModal({ type: 'classDetail', data: { subject, grade } });
     const handleCloseModal = () => setModal({type: null});
@@ -288,6 +296,64 @@ const SubjectEditForm = ({ subject, onSave, onCancel }) => {
     );
 };
 
+const AnalyticsDashboard = ({ students, assignments, scores }) => {
+    const analyticsData = useMemo(() => {
+        if (students.length === 0 || assignments.length === 0) return [];
+        
+        return assignments.map(assign => {
+            const assignmentScores = students
+                .map(student => scores[student.id]?.[assign.id])
+                .filter(score => typeof score === 'number');
+
+            if (assignmentScores.length === 0) {
+                return { id: assign.id, name: assign.name, category: assign.category, avg: '-', max: '-', min: '-' };
+            }
+
+            const sum = assignmentScores.reduce((acc, score) => acc + score, 0);
+            const avg = (sum / assignmentScores.length).toFixed(2);
+            const max = Math.max(...assignmentScores);
+            const min = Math.min(...assignmentScores);
+
+            return { id: assign.id, name: assign.name, category: assign.category, avg, max, min };
+        });
+    }, [students, assignments, scores]);
+
+    if (!analyticsData.length) return null;
+
+    return (
+        <div className="mb-8 p-4 bg-gray-900/50 rounded-xl border border-white/10">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><BarChart2 size={20}/>ภาพรวมคะแนน</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {analyticsData.map((data, index) => {
+                    const cardStyle = analyticsCardStyles[index % analyticsCardStyles.length];
+                    return (
+                        <div key={data.id} className={`bg-gradient-to-br ${cardStyle.gradient} rounded-lg border ${cardStyle.border} overflow-hidden shadow-lg`}>
+                            <div className="p-4">
+                                <p className="font-bold text-white truncate mb-3 text-base">{data.name}</p>
+                                <div className="grid grid-cols-3 gap-2 text-center">
+                                    <div>
+                                        <p className="text-xs text-gray-300 flex items-center justify-center gap-1"><Minus size={12}/>เฉลี่ย</p>
+                                        <p className="text-2xl font-bold text-white">{data.avg}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-300 flex items-center justify-center gap-1"><TrendingUp size={12}/>สูงสุด</p>
+                                        <p className="text-2xl font-bold text-white">{data.max}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-300 flex items-center justify-center gap-1"><TrendingDown size={12}/>ต่ำสุด</p>
+                                        <p className="text-2xl font-bold text-white">{data.min}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+
 const ClassDetailView = ({ subject, grade, onClose }) => {
     const [students, setStudents] = useState([]);
     const [assignments, setAssignments] = useState([]);
@@ -420,6 +486,8 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                         <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={28} /></button>
                     </header>
                     <div className="p-6 flex-grow overflow-auto">
+                        <AnalyticsDashboard students={students} assignments={assignments} scores={scores} />
+
                         <table className="w-full min-w-[900px] text-left border-collapse">
                             <thead className="sticky top-0 bg-gray-800/80 backdrop-blur-xl z-10">
                                 <tr>
@@ -428,11 +496,11 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                                     {assignments.map(assign => {
                                         const category = assignmentCategories[assign.category] || assignmentCategories.quiz;
                                         return (
-                                            <th key={assign.id} className={`p-3 text-sm font-semibold text-white border-b border-r border-gray-700 text-center w-40 group relative`}>
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <span>{assign.name}</span>
-                                                    <span className="block text-xs text-gray-400 font-normal mb-1">({assign.maxScore} คะแนน)</span>
-                                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${category.color}`}>{category.label}</span>
+                                            <th key={assign.id} className={`p-3 text-sm text-white border-b border-r border-gray-700 text-center w-40 group relative`}>
+                                                <div className="flex flex-col items-center justify-center gap-1">
+                                                    <span className="font-semibold w-full truncate" title={assign.name}>{assign.name}</span>
+                                                    <span className="text-xs text-gray-400 font-normal">({assign.maxScore} คะแนน)</span>
+                                                    <span className={`mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${category.color}`}>{category.label}</span>
                                                 </div>
                                                 <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => setModal({ type: 'editAssignment', data: assign })} className="p-1 bg-sky-500/50 hover:bg-sky-500 rounded"><Pencil size={12}/></button>
