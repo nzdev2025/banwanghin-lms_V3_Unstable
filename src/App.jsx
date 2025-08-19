@@ -1,8 +1,49 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { BookOpen, Calculator, FlaskConical, Code, MessageSquare, History, User, X, Save, FilePlus, Loader2, UserPlus, AlertTriangle, Pencil, Trash2, Palette, Settings, GraduationCap, Square, SquareAsterisk, SquareDot, SquareEqual, SquarePen, SquareM, PlusCircle, Tag, Upload, Download, TrendingUp, TrendingDown, Minus, BarChart2 } from 'lucide-react';
+import React from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, serverTimestamp, query, orderBy, deleteDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
-// PapaParse is loaded from a script tag in the main App component
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+
+// --- SVG Icons (from lucide-react) ---
+// Using inline SVGs to make the component self-contained.
+const Icon = ({ name, ...props }) => {
+  const icons = {
+    BookOpen: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+    Calculator: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><line x1="16" x2="16" y1="10" y2="10"/><line x1="12" x2="12" y1="10" y2="10"/><line x1="8" x2="8" y1="10" y2="10"/><line x1="12" x2="12" y1="14" y2="18"/><line x1="8" x2="8" y1="14" y2="18"/></svg>,
+    FlaskConical: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v7.31"/><path d="M14 9.31V2"/><path d="M10 13.31S6 18 6 22h12c0-4-4-8.69-4-8.69"/><path d="M6 16h12"/></svg>,
+    Code: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>,
+    MessageSquare: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+    History: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M12 8v4l2 2"/></svg>,
+    User: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    Users: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    Target: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+    PieChart: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>,
+    X: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    Save: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+    FilePlus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>,
+    Loader2: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
+    UserPlus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>,
+    AlertTriangle: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+    Pencil: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>,
+    Trash2: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+    Settings: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.73l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2.73l.15.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+    Square: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>,
+    SquareAsterisk: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8.5 14 7-4"/><path d="m8.5 10 7 4"/></svg>,
+    SquareDot: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="1"/></svg>,
+    SquareEqual: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 10h10"/><path d="M7 14h10"/></svg>,
+    SquarePen: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg>,
+    SquareM: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 16V8l4 4 4-4v8"/></svg>,
+    PlusCircle: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
+    Upload: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+    Download: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+    TrendingUp: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+    TrendingDown: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>,
+    Minus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+    BarChart2: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  };
+  const IconComponent = icons[name];
+  return IconComponent ? <IconComponent {...props} /> : null;
+};
+
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -15,29 +56,36 @@ const firebaseConfig = {
 };
 
 // --- Initialize Firebase ---
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+let app;
+let db;
+try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+} catch (e) {
+    console.error("Firebase initialization error:", e);
+}
+
 
 // --- App ID for Firestore Path ---
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'banwanghin-lms-dev';
 
 // --- Theming and Data Constants ---
 const colorThemes = {
-    teal: { bg: 'bg-teal-500/10', border: 'border-teal-500/30', shadow: 'hover:shadow-teal-500/20', text: 'text-teal-300' },
-    sky: { bg: 'bg-sky-500/10', border: 'border-sky-500/30', shadow: 'hover:shadow-sky-500/20', text: 'text-sky-300' },
-    purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', shadow: 'hover:shadow-purple-500/20', text: 'text-purple-300' },
-    rose: { bg: 'bg-rose-500/10', border: 'border-rose-500/30', shadow: 'hover:shadow-rose-500/20', text: 'text-rose-300' },
-    amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', shadow: 'hover:shadow-amber-500/20', text: 'text-amber-300' },
-    lime: { bg: 'bg-lime-500/10', border: 'border-lime-500/30', shadow: 'hover:shadow-lime-500/20', text: 'text-lime-300' },
+    teal: { bg: 'bg-teal-500/10', border: 'border-teal-500/30', shadow: 'hover:shadow-teal-500/20', text: 'text-teal-300', hex: '#2dd4bf' },
+    sky: { bg: 'bg-sky-500/10', border: 'border-sky-500/30', shadow: 'hover:shadow-sky-500/20', text: 'text-sky-300', hex: '#38bdf8' },
+    purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', shadow: 'hover:shadow-purple-500/20', text: 'text-purple-300', hex: '#a855f7' },
+    rose: { bg: 'bg-rose-500/10', border: 'border-rose-500/30', shadow: 'hover:shadow-rose-500/20', text: 'text-rose-300', hex: '#f43f5e' },
+    amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', shadow: 'hover:shadow-amber-500/20', text: 'text-amber-300', hex: '#f59e0b' },
+    lime: { bg: 'bg-lime-500/10', border: 'border-lime-500/30', shadow: 'hover:shadow-lime-500/20', text: 'text-lime-300', hex: '#84cc16' },
 };
 
 const gradeStyles = {
-    p1: { icon: Square, color: 'text-rose-400' },
-    p2: { icon: SquareDot, color: 'text-orange-400' },
-    p3: { icon: SquarePen, color: 'text-amber-400' },
-    p4: { icon: SquareAsterisk, color: 'text-lime-400' },
-    p5: { icon: SquareEqual, color: 'text-sky-400' },
-    p6: { icon: SquareM, color: 'text-purple-400' },
+    p1: { icon: 'Square', color: 'text-rose-400' },
+    p2: { icon: 'SquareDot', color: 'text-orange-400' },
+    p3: { icon: 'SquarePen', color: 'text-amber-400' },
+    p4: { icon: 'SquareAsterisk', color: 'text-lime-400' },
+    p5: { icon: 'SquareEqual', color: 'text-sky-400' },
+    p6: { icon: 'SquareM', color: 'text-purple-400' },
 };
 const grades = Object.keys(gradeStyles);
 
@@ -58,13 +106,232 @@ const analyticsCardStyles = [
     { gradient: 'from-fuchsia-500/70 to-purple-500/70', border: 'border-fuchsia-400' },
 ];
 
+// === NEW & UPDATED COMPONENTS ===
+
+const OverallAnalytics = ({ subjects }) => {
+    const [stats, setStats] = React.useState({ totalStudents: 0, overallAverage: 0, isLoading: true });
+    const [barChartData, setBarChartData] = React.useState([]);
+    const [radarChartData, setRadarChartData] = React.useState([]);
+
+    React.useEffect(() => {
+        const fetchAllStats = async () => {
+            if (!db || subjects.length === 0) {
+                setStats({ totalStudents: 0, overallAverage: 0, isLoading: false });
+                setBarChartData([]);
+                setRadarChartData([]);
+                return;
+            }
+            setStats(s => ({ ...s, isLoading: true }));
+
+            let totalStudents = 0;
+            let grandTotalScore = 0;
+            let grandTotalMaxScore = 0;
+            const subjectAverages = [];
+            const categoryCounts = { quiz: 0, midterm: 0, final: 0 };
+
+            for (const subject of subjects) {
+                let subjectTotalScore = 0;
+                let subjectTotalMaxScore = 0;
+                const studentCounts = new Set();
+
+                for (const grade of grades) {
+                    const basePath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}`;
+                    try {
+                        const [studentsSnap, assignmentsSnap, scoresSnap] = await Promise.all([
+                            getDocs(collection(db, `${basePath}/students`)),
+                            getDocs(collection(db, `${basePath}/assignments`)),
+                            getDocs(collection(db, `${basePath}/scores`))
+                        ]);
+                        
+                        studentsSnap.forEach(doc => studentCounts.add(doc.id));
+
+                        const assignmentsMap = new Map();
+                        assignmentsSnap.forEach(doc => {
+                            const data = doc.data();
+                            assignmentsMap.set(doc.id, data);
+                            const category = data.category || 'quiz';
+                            if (categoryCounts.hasOwnProperty(category)) {
+                                categoryCounts[category]++;
+                            }
+                        });
+                        
+                        scoresSnap.forEach(scoreDoc => {
+                            const scores = scoreDoc.data();
+                            for (const assignmentId in scores) {
+                                const assignment = assignmentsMap.get(assignmentId);
+                                if (assignment && typeof scores[assignmentId] === 'number') {
+                                    subjectTotalScore += scores[assignmentId];
+                                    subjectTotalMaxScore += assignment.maxScore;
+                                }
+                            }
+                        });
+                    } catch (e) {
+                         // This can happen if a grade collection doesn't exist yet, which is fine.
+                    }
+                }
+                
+                totalStudents += studentCounts.size;
+                grandTotalScore += subjectTotalScore;
+                grandTotalMaxScore += subjectTotalMaxScore;
+
+                const subjectAverage = subjectTotalMaxScore > 0 ? (subjectTotalScore / subjectTotalMaxScore) * 100 : 0;
+                subjectAverages.push({
+                    id: subject.id,
+                    name: subject.name,
+                    average: subjectAverage,
+                    colorTheme: subject.colorTheme,
+                });
+            }
+
+            const overallAverage = grandTotalMaxScore > 0 ? (grandTotalScore / grandTotalMaxScore) * 100 : 0;
+            
+            setBarChartData(subjectAverages.sort((a, b) => b.average - a.average));
+            
+            const radarData = [
+                { type: 'เก็บคะแนน', count: categoryCounts.quiz },
+                { type: 'กลางภาค', count: categoryCounts.midterm },
+                { type: 'ปลายภาค', count: categoryCounts.final },
+            ];
+            setRadarChartData(radarData);
+
+            setStats({ totalStudents, overallAverage, isLoading: false });
+        };
+
+        fetchAllStats();
+    }, [subjects]);
+
+    return (
+        <div className="mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                 <KeyMetricCard icon="BookOpen" title="จำนวนวิชาทั้งหมด" value={subjects.length} isLoading={stats.isLoading} theme={colorThemes.teal} />
+                 <KeyMetricCard icon="Users" title="จำนวนนักเรียนในระบบ" value={stats.totalStudents} isLoading={stats.isLoading} theme={colorThemes.sky} />
+                 <KeyMetricCard icon="Target" title="ค่าเฉลี่ยคะแนนรวม" value={`${stats.overallAverage.toFixed(2)}%`} isLoading={stats.isLoading} theme={colorThemes.purple} />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <SubjectPerformanceChart data={barChartData} isLoading={stats.isLoading} />
+                <AssignmentTypeDistributionChart data={radarChartData} isLoading={stats.isLoading} />
+            </div>
+        </div>
+    );
+};
+
+const KeyMetricCard = ({ icon, title, value, isLoading, theme }) => {
+    return (
+        <div className={`p-6 rounded-2xl backdrop-blur-lg shadow-lg flex items-center gap-6 ${theme.bg} ${theme.border}`}>
+            <div className={`p-4 rounded-lg bg-white/10`}>
+                <Icon name={icon} size={32} className={theme.text} />
+            </div>
+            <div>
+                <p className="text-sm text-gray-400">{title}</p>
+                {isLoading ? (
+                     <div className="h-8 w-24 bg-gray-700/50 rounded-md animate-pulse mt-1"></div>
+                ) : (
+                    <p className="text-3xl font-bold text-white">{value}</p>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const SubjectPerformanceChart = ({ data, isLoading }) => {
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-gray-900/80 backdrop-blur-sm border border-white/20 p-3 rounded-lg shadow-lg">
+                    <p className="font-bold text-white">{`${label}`}</p>
+                    <p className="text-teal-300">{`คะแนนเฉลี่ย: ${payload[0].value.toFixed(2)}%`}</p>
+                </div>
+            );
+        }
+        return null;
+    };
+
+    if (isLoading) {
+        return (
+             <div className="p-6 rounded-2xl backdrop-blur-lg bg-gray-800/30 border border-gray-700/50 h-[400px] flex items-center justify-center">
+                <Icon name="Loader2" className="animate-spin text-teal-400" size={40} />
+             </div>
+        )
+    }
+
+    return (
+        <div className="p-6 rounded-2xl backdrop-blur-lg bg-gray-800/30 border border-gray-700/50 h-[400px]">
+            <h3 className="text-lg font-bold text-white mb-4">ประสิทธิภาพรายวิชา (คะแนนเฉลี่ย)</h3>
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 60 }}>
+                    <defs>
+                        {Object.keys(colorThemes).map((key) => (
+                            <linearGradient id={`color-${key}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={colorThemes[key].hex} stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor={colorThemes[key].hex} stopOpacity={0.2}/>
+                            </linearGradient>
+                        ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+                    <XAxis 
+                        dataKey="name" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        tick={{ fill: '#9ca3af', fontSize: 12 }} 
+                        interval={0}
+                    />
+                    <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} unit="%" />
+                    <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(148, 163, 184, 0.1)'}} />
+                    <Bar dataKey="average" radius={[4, 4, 0, 0]} isAnimationActive={true}>
+                         {data.map((entry) => (
+                            <Cell key={`cell-${entry.id}`} fill={`url(#color-${entry.colorTheme || 'teal'})`} />
+                        ))}
+                    </Bar>
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
+const AssignmentTypeDistributionChart = ({ data, isLoading }) => {
+    if (isLoading) {
+        return (
+             <div className="p-6 rounded-2xl backdrop-blur-lg bg-gray-800/30 border border-gray-700/50 h-[400px] flex items-center justify-center">
+                <Icon name="Loader2" className="animate-spin text-purple-400" size={40} />
+             </div>
+        )
+    }
+
+    return (
+        <div className="p-6 rounded-2xl backdrop-blur-lg bg-gray-800/30 border border-gray-700/50 h-[400px]">
+            <h3 className="text-lg font-bold text-white mb-4">สัดส่วนประเภทงาน</h3>
+            <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+                    <PolarGrid stroke="rgba(255, 255, 255, 0.2)" />
+                    <PolarAngleAxis dataKey="type" tick={{ fill: '#9ca3af', fontSize: 14 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 'dataMax + 5']} tick={false} axisLine={false} />
+                    <Radar name="Assignments" dataKey="count" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: 'rgba(31, 41, 55, 0.8)',
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                            borderRadius: '0.5rem',
+                        }}
+                        labelStyle={{ color: '#ffffff' }}
+                    />
+                </RadarChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
 
 // === MAIN APP COMPONENT ===
 export default function App() {
-    const [subjects, setSubjects] = useState([]);
-    const [modal, setModal] = useState({ type: null, data: null });
+    const [subjects, setSubjects] = React.useState([]);
+    const [modal, setModal] = React.useState({ type: null, data: null });
     
-    useEffect(() => {
+    React.useEffect(() => {
+        if (!db) {
+            console.error("Firestore is not initialized.");
+            return;
+        }
         const subjectsMetaPath = `artifacts/${appId}/public/data/subjects_meta`;
         const q = query(collection(db, subjectsMetaPath), orderBy("createdAt"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -76,7 +343,8 @@ export default function App() {
         return () => unsubscribe();
     }, []);
 
-    useEffect(() => {
+    // Effect for loading PapaParse script
+    React.useEffect(() => {
         const scriptId = 'papaparse-script';
         if (document.getElementById(scriptId)) return;
         const script = document.createElement('script');
@@ -92,22 +360,29 @@ export default function App() {
     const handleCloseModal = () => setModal({type: null});
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white font-sans relative overflow-hidden">
+        <div className="min-h-screen bg-gray-900 text-white font-sans relative overflow-hidden flex flex-col">
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
                 <div className="absolute w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] bg-teal-500/20 rounded-full filter blur-3xl animate-blob animation-delay-2000 top-1/4 left-1/4"></div>
                 <div className="absolute w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] bg-purple-500/20 rounded-full filter blur-3xl animate-blob animation-delay-4000 bottom-1/4 right-1/4"></div>
             </div>
             
-            <main className="relative z-10 p-4 sm:p-6 md:p-8">
+            <main className="relative z-10 p-4 sm:p-6 md:p-8 flex-grow">
                 <header className="flex justify-between items-center mb-8">
                     <div><h1 className="text-3xl md:text-4xl font-bold text-white">Dashboard</h1><p className="text-gray-400">ภาพรวมรายวิชา - โรงเรียนบ้านวังหิน</p></div>
-                    <button onClick={() => setModal({type: 'manageSubjects'})} className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Settings size={16}/>จัดการวิชา</button>
+                    <button onClick={() => setModal({type: 'manageSubjects'})} className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="Settings" size={16}/>จัดการวิชา</button>
                 </header>
+
+                <OverallAnalytics subjects={subjects} />
                 
+                <h2 className="text-2xl font-bold text-white mb-6 mt-10">รายวิชาทั้งหมด</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {subjects.map((subject) => (<ClassCard key={subject.id} subject={subject} onClick={() => handleCardClick(subject)}/>))}
                 </div>
             </main>
+
+            <footer className="relative z-10 text-center py-4 text-gray-500 text-sm">
+                <p>Developed by Wasin Suksuwan | ICTTalent Connext ED</p>
+            </footer>
             
             {modal.type === 'selectGrade' && <GradeSelectionModal subject={modal.data} onSelect={handleGradeSelect} onClose={handleCloseModal} />}
             {modal.type === 'classDetail' && (<ClassDetailView subject={modal.data.subject} grade={modal.data.grade} onClose={handleCloseModal}/>)}
@@ -116,28 +391,29 @@ export default function App() {
     );
 }
 
-// === CHILD COMPONENTS ===
+// === CHILD COMPONENTS (UNCHANGED) ===
 
 const ClassCard = ({ subject, onClick }) => {
     const theme = colorThemes[subject.colorTheme] || colorThemes.teal;
-    const Icon = { BookOpen, Calculator, FlaskConical, Code, MessageSquare, History }[subject.iconName] || BookOpen;
+    const iconName = subject.iconName || 'BookOpen';
     return (
         <div onClick={onClick} className={`backdrop-blur-lg rounded-2xl p-6 transform hover:-translate-y-2 transition-all duration-300 cursor-pointer shadow-lg ${theme.bg} ${theme.border} ${theme.shadow}`}>
             <div className="flex justify-between items-start">
                 <div className="flex-grow"><h3 className="text-xl font-bold text-white truncate">{subject.name}</h3><p className="text-sm text-gray-400">{subject.gradeRange}</p></div>
-                <div className={`p-3 rounded-lg bg-white/5`}><Icon className={theme.text} size={24} /></div>
+                <div className={`p-3 rounded-lg bg-white/5`}><Icon name={iconName} className={theme.text} size={24} /></div>
             </div>
-            <div className="mt-6 flex items-center text-sm text-gray-300"><User size={16} className="mr-2"/><span>{subject.teacherName || 'ยังไม่ได้กำหนด'}</span></div>
+            <div className="mt-6 flex items-center text-sm text-gray-300"><Icon name="User" size={16} className="mr-2"/><span>{subject.teacherName || 'ยังไม่ได้กำหนด'}</span></div>
         </div>
     );
 };
 
 const GradeSelectionModal = ({ subject, onSelect, onClose }) => {
-    const [gradeCounts, setGradeCounts] = useState({});
-    const [isLoading, setIsLoading] = useState(true);
+    const [gradeCounts, setGradeCounts] = React.useState({});
+    const [isLoading, setIsLoading] = React.useState(true);
 
-    useEffect(() => {
+    React.useEffect(() => {
         const fetchCounts = async () => {
+            if (!db) return;
             setIsLoading(true);
             const counts = {};
             const gradePromises = grades.map(async (gradeId) => {
@@ -157,19 +433,18 @@ const GradeSelectionModal = ({ subject, onSelect, onClose }) => {
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-3xl shadow-2xl shadow-black/50 p-8 text-center" onClick={(e) => e.stopPropagation()}>
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={28} /></button>
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white"><Icon name="X" size={28} /></button>
                 <h2 className="text-3xl font-bold text-white mb-2">เลือกชั้นเรียน</h2>
                 <p className="text-lg text-gray-300 mb-8">วิชา: {subject.name}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
                     {grades.map((gradeId, index) => {
                         const style = gradeStyles[gradeId];
-                        const GradeIcon = style.icon;
                         return (
                             <button key={gradeId} onClick={() => onSelect(subject, gradeId)} className={`group w-full p-6 bg-white/5 hover:bg-white/10 border border-white/20 rounded-xl transition-all duration-300 transform hover:scale-105 flex flex-col items-center justify-center`}>
-                                <GradeIcon className={`w-12 h-12 mb-3 transition-colors ${style.color}`} />
+                                <Icon name={style.icon} className={`w-12 h-12 mb-3 transition-colors ${style.color}`} />
                                 <span className="text-xl font-bold text-white">ป.{index + 1}</span>
                                 <div className="flex items-center text-sm font-normal text-gray-400 mt-1">
-                                    {isLoading ? <Loader2 size={16} className="animate-spin" /> : <><User size={16} className="mr-1.5"/><span>{gradeCounts[gradeId] || 0} คน</span></>}
+                                    {isLoading ? <Icon name="Loader2" size={16} className="animate-spin" /> : <><Icon name="User" size={16} className="mr-1.5"/><span>{gradeCounts[gradeId] || 0} คน</span></>}
                                 </div>
                             </button>
                         );
@@ -181,9 +456,10 @@ const GradeSelectionModal = ({ subject, onSelect, onClose }) => {
 };
 
 const SubjectManagementModal = ({subjects, onClose}) => {
-    const [editingSubject, setEditingSubject] = useState(null);
+    const [editingSubject, setEditingSubject] = React.useState(null);
 
     const handleSave = async (subjectData) => {
+        if (!db) return;
         const subjectsMetaPath = `artifacts/${appId}/public/data/subjects_meta`;
         try {
             if (subjectData.id) {
@@ -201,6 +477,7 @@ const SubjectManagementModal = ({subjects, onClose}) => {
     };
     
     const handleDelete = async (id) => {
+        if (!db) return;
         try {
             const subjectsMetaPath = `artifacts/${appId}/public/data/subjects_meta`;
             await deleteDoc(doc(db, subjectsMetaPath, id));
@@ -218,7 +495,7 @@ const SubjectManagementModal = ({subjects, onClose}) => {
             <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl shadow-black/50">
                 <header className="flex items-center justify-between p-4 border-b border-white/10">
                     <h2 className="text-2xl font-bold">จัดการรายวิชา</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={28} /></button>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white"><Icon name="X" size={28} /></button>
                 </header>
                 <div className="p-6 flex-grow overflow-y-auto">
                     <ul className="space-y-3">
@@ -229,8 +506,8 @@ const SubjectManagementModal = ({subjects, onClose}) => {
                                     <p className="text-sm text-gray-400">{sub.teacherName}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => setEditingSubject(sub)} className="p-2 text-sky-400 hover:bg-sky-500/20 rounded"><Pencil size={18}/></button>
-                                    <button onClick={() => handleDelete(sub.id)} className="p-2 text-red-400 hover:bg-red-500/20 rounded"><Trash2 size={18}/></button>
+                                    <button onClick={() => setEditingSubject(sub)} className="p-2 text-sky-400 hover:bg-sky-500/20 rounded"><Icon name="Pencil" size={18}/></button>
+                                    <button onClick={() => handleDelete(sub.id)} className="p-2 text-red-400 hover:bg-red-500/20 rounded"><Icon name="Trash2" size={18}/></button>
                                 </div>
                             </li>
                         ))}
@@ -238,7 +515,7 @@ const SubjectManagementModal = ({subjects, onClose}) => {
                 </div>
                 <footer className="p-4 border-t border-white/10">
                     <button onClick={() => setEditingSubject({})} className="w-full flex items-center justify-center gap-2 bg-teal-500/80 hover:bg-teal-500 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                        <PlusCircle size={20}/> เพิ่มวิชาใหม่
+                        <Icon name="PlusCircle" size={20}/> เพิ่มวิชาใหม่
                     </button>
                 </footer>
             </div>
@@ -247,7 +524,7 @@ const SubjectManagementModal = ({subjects, onClose}) => {
 };
 
 const SubjectEditForm = ({ subject, onSave, onCancel }) => {
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = React.useState({
         name: subject.name || '',
         teacherName: subject.teacherName || '',
         gradeRange: subject.gradeRange || 'ป.1-ป.6',
@@ -282,7 +559,7 @@ const SubjectEditForm = ({ subject, onSave, onCancel }) => {
                         <label className="block text-sm font-medium text-gray-300 mb-1">ชุดสี (Theme)</label>
                         <div className="grid grid-cols-6 gap-2">
                             {Object.keys(colorThemes).map(themeKey => (
-                                <button type="button" key={themeKey} onClick={() => setFormData(p => ({...p, colorTheme: themeKey}))} className={`h-10 rounded-lg ${colorThemes[themeKey].bg} ${formData.colorTheme === themeKey ? `ring-2 ring-offset-2 ring-offset-gray-800 ${colorThemes[themeKey].text.replace('text-','ring-')}` : ''}`}></button>
+                                <button type="button" key={themeKey} onClick={() => setFormData(p => ({...p, colorTheme: themeKey}))} className={`h-10 rounded-lg ${colorThemes[themeKey].bg} ${formData.colorTheme === themeKey ? `ring-2 ring-offset-2 ring-offset-gray-800 ring-${themeKey}-400` : ''}`}></button>
                             ))}
                         </div>
                     </div>
@@ -297,7 +574,7 @@ const SubjectEditForm = ({ subject, onSave, onCancel }) => {
 };
 
 const AnalyticsDashboard = ({ students, assignments, scores }) => {
-    const analyticsData = useMemo(() => {
+    const analyticsData = React.useMemo(() => {
         if (students.length === 0 || assignments.length === 0) return [];
         
         return assignments.map(assign => {
@@ -322,7 +599,7 @@ const AnalyticsDashboard = ({ students, assignments, scores }) => {
 
     return (
         <div className="mb-8 p-4 bg-gray-900/50 rounded-xl border border-white/10">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><BarChart2 size={20}/>ภาพรวมคะแนน</h3>
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><Icon name="BarChart2" size={20}/>ภาพรวมคะแนน</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {analyticsData.map((data, index) => {
                     const cardStyle = analyticsCardStyles[index % analyticsCardStyles.length];
@@ -332,15 +609,15 @@ const AnalyticsDashboard = ({ students, assignments, scores }) => {
                                 <p className="font-bold text-white truncate mb-3 text-base">{data.name}</p>
                                 <div className="grid grid-cols-3 gap-2 text-center">
                                     <div>
-                                        <p className="text-xs text-gray-300 flex items-center justify-center gap-1"><Minus size={12}/>เฉลี่ย</p>
+                                        <p className="text-xs text-gray-300 flex items-center justify-center gap-1"><Icon name="Minus" size={12}/>เฉลี่ย</p>
                                         <p className="text-2xl font-bold text-white">{data.avg}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-300 flex items-center justify-center gap-1"><TrendingUp size={12}/>สูงสุด</p>
+                                        <p className="text-xs text-gray-300 flex items-center justify-center gap-1"><Icon name="TrendingUp" size={12}/>สูงสุด</p>
                                         <p className="text-2xl font-bold text-white">{data.max}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-300 flex items-center justify-center gap-1"><TrendingDown size={12}/>ต่ำสุด</p>
+                                        <p className="text-xs text-gray-300 flex items-center justify-center gap-1"><Icon name="TrendingDown" size={12}/>ต่ำสุด</p>
                                         <p className="text-2xl font-bold text-white">{data.min}</p>
                                     </div>
                                 </div>
@@ -355,15 +632,16 @@ const AnalyticsDashboard = ({ students, assignments, scores }) => {
 
 
 const ClassDetailView = ({ subject, grade, onClose }) => {
-    const [students, setStudents] = useState([]);
-    const [assignments, setAssignments] = useState([]);
-    const [scores, setScores] = useState({});
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [modal, setModal] = useState({ type: null, data: null });
+    const [students, setStudents] = React.useState([]);
+    const [assignments, setAssignments] = React.useState([]);
+    const [scores, setScores] = React.useState({});
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [isSaving, setIsSaving] = React.useState(false);
+    const [modal, setModal] = React.useState({ type: null, data: null });
     const basePath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}`;
 
-    useEffect(() => {
+    React.useEffect(() => {
+        if (!db) return;
         setIsLoading(true);
         const studentsQuery = query(collection(db, `${basePath}/students`), orderBy("studentNumber"));
         const assignmentsQuery = query(collection(db, `${basePath}/assignments`), orderBy("createdAt"));
@@ -388,6 +666,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
     };
 
     const handleSaveAll = async () => {
+        if (!db) return;
         setIsSaving(true);
         try {
             const batch = writeBatch(db);
@@ -402,6 +681,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
     };
 
     const handleAddOrEdit = async (type, data) => {
+        if (!db) return;
         const collectionName = type === 'student' ? 'students' : 'assignments';
         try {
             if (data.id) {
@@ -417,7 +697,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
     };
 
     const handleDelete = async (type, id) => {
-        if (!id) return;
+        if (!id || !db) return;
         const collectionName = type === 'student' ? 'students' : 'assignments';
         try {
             const docRef = doc(db, `${basePath}/${collectionName}`, id);
@@ -460,6 +740,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
     };
 
     const handleImportStudents = async (newStudents) => {
+        if (!db) return;
         const studentsCollectionRef = collection(db, `${basePath}/students`);
         try {
             const batch = writeBatch(db);
@@ -475,7 +756,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
     };
 
 
-    if (isLoading) return <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"><Loader2 className="animate-spin text-teal-500" size={48} /></div>;
+    if (isLoading) return <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"><Icon name="Loader2" className="animate-spin text-teal-500" size={48} /></div>;
 
     return (
         <>
@@ -483,7 +764,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                 <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-7xl h-[90vh] flex flex-col shadow-2xl shadow-black/50">
                     <header className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
                         <div><h2 className="text-2xl font-bold text-white">{subject.name} - (ป.{grade.replace('p','')})</h2><p className="text-gray-400">ตารางบันทึกคะแนน</p></div>
-                        <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={28} /></button>
+                        <button onClick={onClose} className="text-gray-400 hover:text-white"><Icon name="X" size={28} /></button>
                     </header>
                     <div className="p-6 flex-grow overflow-auto">
                         <AnalyticsDashboard students={students} assignments={assignments} scores={scores} />
@@ -503,8 +784,8 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                                                     <span className={`mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${category.color}`}>{category.label}</span>
                                                 </div>
                                                 <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => setModal({ type: 'editAssignment', data: assign })} className="p-1 bg-sky-500/50 hover:bg-sky-500 rounded"><Pencil size={12}/></button>
-                                                    <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'assignment', id: assign.id, name: assign.name }})} className="p-1 bg-red-500/50 hover:bg-red-500 rounded"><Trash2 size={12}/></button>
+                                                    <button onClick={() => setModal({ type: 'editAssignment', data: assign })} className="p-1 bg-sky-500/50 hover:bg-sky-500 rounded"><Icon name="Pencil" size={12}/></button>
+                                                    <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'assignment', id: assign.id, name: assign.name }})} className="p-1 bg-red-500/50 hover:bg-red-500 rounded"><Icon name="Trash2" size={12}/></button>
                                                 </div>
                                             </th>
                                         );
@@ -528,8 +809,8 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                                         <td className="p-3 text-center border-b border-r border-gray-700 font-bold text-teal-300">{totalScore}</td>
                                         <td className="p-2 text-center border-b border-r border-gray-700">
                                             <div className="flex justify-center gap-2">
-                                               <button onClick={() => setModal({ type: 'editStudent', data: student })} className="p-1.5 text-sky-400 hover:bg-sky-500 hover:text-white rounded"><Pencil size={16}/></button>
-                                               <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'student', id: student.id, name: `${student.firstName} ${student.lastName}` }})} className="p-1.5 text-red-400 hover:bg-red-500 hover:text-white rounded"><Trash2 size={16}/></button>
+                                               <button onClick={() => setModal({ type: 'editStudent', data: student })} className="p-1.5 text-sky-400 hover:bg-sky-500 hover:text-white rounded"><Icon name="Pencil" size={16}/></button>
+                                               <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'student', id: student.id, name: `${student.firstName} ${student.lastName}` }})} className="p-1.5 text-red-400 hover:bg-red-500 hover:text-white rounded"><Icon name="Trash2" size={16}/></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -540,13 +821,13 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                     </div>
                     <footer className="flex items-center justify-between p-4 border-t border-white/10 flex-shrink-0 gap-4">
                         <div className="flex gap-4">
-                            <button onClick={() => setModal({ type: 'addStudent' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><UserPlus size={16} />เพิ่มนักเรียน</button>
-                            <button onClick={() => setModal({ type: 'addAssignment' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><FilePlus size={16} />เพิ่มรายการเก็บคะแนน</button>
-                            <button onClick={() => setModal({ type: 'importStudents' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Upload size={16} />นำเข้ารายชื่อ</button>
-                            <button onClick={handleExportData} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Download size={16} />ส่งออกคะแนน</button>
+                            <button onClick={() => setModal({ type: 'addStudent' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="UserPlus" size={16} />เพิ่มนักเรียน</button>
+                            <button onClick={() => setModal({ type: 'addAssignment' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="FilePlus" size={16} />เพิ่มรายการเก็บคะแนน</button>
+                            <button onClick={() => setModal({ type: 'importStudents' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="Upload" size={16} />นำเข้ารายชื่อ</button>
+                            <button onClick={handleExportData} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="Download" size={16} />ส่งออกคะแนน</button>
                         </div>
                         <button onClick={handleSaveAll} disabled={isSaving} className="flex items-center gap-2 text-sm bg-teal-500/80 hover:bg-teal-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-teal-500/20 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}{isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                            {isSaving ? <Icon name="Loader2" className="animate-spin" size={16} /> : <Icon name="Save" size={16} />}{isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
                         </button>
                     </footer>
                 </div>
@@ -563,9 +844,9 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
 };
 
 const StudentModal = ({ onClose, onSave, initialData = null }) => {
-    const [studentNumber, setStudentNumber] = useState(initialData?.studentNumber || '');
-    const [firstName, setFirstName] = useState(initialData?.firstName || '');
-    const [lastName, setLastName] = useState(initialData?.lastName || '');
+    const [studentNumber, setStudentNumber] = React.useState(initialData?.studentNumber || '');
+    const [firstName, setFirstName] = React.useState(initialData?.firstName || '');
+    const [lastName, setLastName] = React.useState(initialData?.lastName || '');
     const isEditMode = !!initialData;
     const handleSubmit = (e) => { e.preventDefault(); if (studentNumber && firstName.trim() && lastName.trim()) { onSave({ id: initialData?.id, studentNumber: parseInt(studentNumber, 10), firstName, lastName }); }};
     return (
@@ -582,9 +863,9 @@ const StudentModal = ({ onClose, onSave, initialData = null }) => {
 };
 
 const AssignmentModal = ({ onClose, onSave, initialData = null }) => {
-    const [name, setName] = useState(initialData?.name || '');
-    const [maxScore, setMaxScore] = useState(initialData?.maxScore || 10);
-    const [category, setCategory] = useState(initialData?.category || 'quiz');
+    const [name, setName] = React.useState(initialData?.name || '');
+    const [maxScore, setMaxScore] = React.useState(initialData?.maxScore || 10);
+    const [category, setCategory] = React.useState(initialData?.category || 'quiz');
     const isEditMode = !!initialData;
 
     const handleSubmit = (e) => {
@@ -631,7 +912,7 @@ const ConfirmationModal = ({ onClose, onConfirm, item }) => {
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="bg-gray-800 border border-red-500/50 rounded-2xl p-6 w-full max-w-md shadow-2xl text-center">
-                <AlertTriangle className="text-red-400 mx-auto mb-4" size={48} />
+                <Icon name="AlertTriangle" className="text-red-400 mx-auto mb-4" size={48} />
                 <h3 className="text-xl font-bold mb-2">ยืนยันการลบ</h3>
                 <p className="text-gray-300 mb-6">คุณแน่ใจหรือไม่ว่าต้องการลบ "{item.name}"? <br/><span className="text-red-400 font-semibold">การกระทำนี้ไม่สามารถย้อนกลับได้</span></p>
                 <div className="flex justify-center gap-4"><button onClick={onClose} className="py-2 px-6 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors">ยกเลิก</button><button onClick={() => { onConfirm(); onClose(); }} className="py-2 px-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">ยืนยันการลบ</button></div>
@@ -641,10 +922,10 @@ const ConfirmationModal = ({ onClose, onConfirm, item }) => {
 };
 
 const ImportStudentsModal = ({ onClose, onImport }) => {
-    const [file, setFile] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [error, setError] = useState('');
-    const fileInputRef = useRef(null);
+    const [file, setFile] = React.useState(null);
+    const [isProcessing, setIsProcessing] = React.useState(false);
+    const [error, setError] = React.useState('');
+    const fileInputRef = React.useRef(null);
 
     const handleFileChange = (event) => {
         const selectedFile = event.target.files[0];
@@ -721,7 +1002,7 @@ const ImportStudentsModal = ({ onClose, onImport }) => {
                 <div className="flex justify-end gap-4 mt-6">
                     <button type="button" onClick={onClose} className="py-2 px-4 text-gray-300 hover:text-white">ยกเลิก</button>
                     <button onClick={handleProcessFile} disabled={!file || isProcessing} className="flex items-center gap-2 py-2 px-4 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
-                        {isProcessing ? <Loader2 className="animate-spin" size={16}/> : <Upload size={16}/>}
+                        {isProcessing ? <Icon name="Loader2" className="animate-spin" size={16}/> : <Icon name="Upload" size={16}/>}
                         {isProcessing ? 'กำลังประมวลผล...' : 'นำเข้าข้อมูล'}
                     </button>
                 </div>
