@@ -15,6 +15,7 @@ const Icon = ({ name, ...props }) => {
     History: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M12 8v4l2 2"/></svg>,
     User: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
     Users: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    Users2: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 19a6 6 0 0 0-12 0"/><circle cx="8" cy="10" r="4"/><path d="M22 19a6 6 0 0 0-6-6 4 4 0 1 0 0-8"/></svg>,
     Target: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
     PieChart: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>,
     X: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
@@ -115,10 +116,8 @@ const OverallAnalytics = ({ subjects }) => {
 
     React.useEffect(() => {
         const fetchAllStats = async () => {
-            if (!db || subjects.length === 0) {
-                setStats({ totalStudents: 0, overallAverage: 0, isLoading: false });
-                setBarChartData([]);
-                setRadarChartData([]);
+            if (!db) {
+                setStats(s => ({ ...s, isLoading: false }));
                 return;
             }
             setStats(s => ({ ...s, isLoading: true }));
@@ -129,22 +128,23 @@ const OverallAnalytics = ({ subjects }) => {
             const subjectAverages = [];
             const categoryCounts = { quiz: 0, midterm: 0, final: 0 };
 
+            // Fetch all student counts from central rosters first
+            const studentCountPromises = grades.map(grade => getDocs(collection(db, `artifacts/${appId}/public/data/rosters/${grade}/students`)));
+            const studentCountSnapshots = await Promise.all(studentCountPromises);
+            studentCountSnapshots.forEach(snap => totalStudents += snap.size);
+
             for (const subject of subjects) {
                 let subjectTotalScore = 0;
                 let subjectTotalMaxScore = 0;
-                const studentCounts = new Set();
-
+                
                 for (const grade of grades) {
                     const basePath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}`;
                     try {
-                        const [studentsSnap, assignmentsSnap, scoresSnap] = await Promise.all([
-                            getDocs(collection(db, `${basePath}/students`)),
+                        const [assignmentsSnap, scoresSnap] = await Promise.all([
                             getDocs(collection(db, `${basePath}/assignments`)),
                             getDocs(collection(db, `${basePath}/scores`))
                         ]);
                         
-                        studentsSnap.forEach(doc => studentCounts.add(doc.id));
-
                         const assignmentsMap = new Map();
                         assignmentsSnap.forEach(doc => {
                             const data = doc.data();
@@ -170,7 +170,6 @@ const OverallAnalytics = ({ subjects }) => {
                     }
                 }
                 
-                totalStudents += studentCounts.size;
                 grandTotalScore += subjectTotalScore;
                 grandTotalMaxScore += subjectTotalMaxScore;
 
@@ -369,7 +368,10 @@ export default function App() {
             <main className="relative z-10 p-4 sm:p-6 md:p-8 flex-grow">
                 <header className="flex justify-between items-center mb-8">
                     <div><h1 className="text-3xl md:text-4xl font-bold text-white">Dashboard</h1><p className="text-gray-400">ภาพรวมรายวิชา - โรงเรียนบ้านวังหิน</p></div>
-                    <button onClick={() => setModal({type: 'manageSubjects'})} className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="Settings" size={16}/>จัดการวิชา</button>
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setModal({type: 'manageRoster'})} className="flex items-center gap-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-sky-500/40"><Icon name="Users2" size={16}/>ทะเบียนนักเรียน</button>
+                        <button onClick={() => setModal({type: 'manageSubjects'})} className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="Settings" size={16}/>จัดการวิชา</button>
+                    </div>
                 </header>
 
                 <OverallAnalytics subjects={subjects} />
@@ -387,11 +389,12 @@ export default function App() {
             {modal.type === 'selectGrade' && <GradeSelectionModal subject={modal.data} onSelect={handleGradeSelect} onClose={handleCloseModal} />}
             {modal.type === 'classDetail' && (<ClassDetailView subject={modal.data.subject} grade={modal.data.grade} onClose={handleCloseModal}/>)}
             {modal.type === 'manageSubjects' && <SubjectManagementModal subjects={subjects} onClose={handleCloseModal}/>}
+            {modal.type === 'manageRoster' && <RosterManagementModal onClose={handleCloseModal} />}
         </div>
     );
 }
 
-// === CHILD COMPONENTS (UNCHANGED) ===
+// === CHILD COMPONENTS (UNCHANGED & NEW) ===
 
 const ClassCard = ({ subject, onClick }) => {
     const theme = colorThemes[subject.colorTheme] || colorThemes.teal;
@@ -417,7 +420,7 @@ const GradeSelectionModal = ({ subject, onSelect, onClose }) => {
             setIsLoading(true);
             const counts = {};
             const gradePromises = grades.map(async (gradeId) => {
-                const studentsPath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${gradeId}/students`;
+                const studentsPath = `artifacts/${appId}/public/data/rosters/${gradeId}/students`;
                 try {
                     const snapshot = await getDocs(collection(db, studentsPath));
                     counts[gradeId] = snapshot.size;
@@ -434,8 +437,8 @@ const GradeSelectionModal = ({ subject, onSelect, onClose }) => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-3xl shadow-2xl shadow-black/50 p-8 text-center" onClick={(e) => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white"><Icon name="X" size={28} /></button>
-                <h2 className="text-3xl font-bold text-white mb-2">เลือกชั้นเรียน</h2>
-                <p className="text-lg text-gray-300 mb-8">วิชา: {subject.name}</p>
+                <h2 className="text-3xl font-bold text-white mb-2">เลือกชั้นเรียนสำหรับวิชา</h2>
+                <p className="text-lg text-gray-300 mb-8">{subject.name}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
                     {grades.map((gradeId, index) => {
                         const style = gradeStyles[gradeId];
@@ -638,17 +641,21 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const [modal, setModal] = React.useState({ type: null, data: null });
-    const basePath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}`;
+    
+    const subjectBasePath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}`;
+    const rosterBasePath = `artifacts/${appId}/public/data/rosters/${grade}`;
 
     React.useEffect(() => {
         if (!db) return;
         setIsLoading(true);
-        const studentsQuery = query(collection(db, `${basePath}/students`), orderBy("studentNumber"));
-        const assignmentsQuery = query(collection(db, `${basePath}/assignments`), orderBy("createdAt"));
+        const studentsQuery = query(collection(db, `${rosterBasePath}/students`), orderBy("studentNumber"));
+        const assignmentsQuery = query(collection(db, `${subjectBasePath}/assignments`), orderBy("createdAt"));
+        const scoresQuery = collection(db, `${subjectBasePath}/scores`);
+
         const unsubscribers = [
             onSnapshot(studentsQuery, (snapshot) => setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))),
             onSnapshot(assignmentsQuery, (snapshot) => setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))),
-            onSnapshot(collection(db, `${basePath}/scores`), (snapshot) => {
+            onSnapshot(scoresQuery, (snapshot) => {
                 const scoreData = {};
                 snapshot.docs.forEach(doc => { scoreData[doc.id] = doc.data(); });
                 setScores(scoreData);
@@ -656,7 +663,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
             })
         ];
         return () => unsubscribers.forEach(unsub => unsub());
-    }, [basePath]);
+    }, [subjectBasePath, rosterBasePath]);
 
     const handleScoreChange = (studentId, assignmentId, value) => {
         const newScores = JSON.parse(JSON.stringify(scores));
@@ -672,7 +679,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
             const batch = writeBatch(db);
             Object.keys(scores).forEach(studentId => {
                 const studentScores = scores[studentId];
-                const docRef = doc(db, `${basePath}/scores`, studentId);
+                const docRef = doc(db, `${subjectBasePath}/scores`, studentId);
                 batch.set(docRef, studentScores, { merge: true });
             });
             await batch.commit();
@@ -680,45 +687,35 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
         finally { setIsSaving(false); }
     };
 
-    const handleAddOrEdit = async (type, data) => {
+    const handleAddOrEditAssignment = async (data) => {
         if (!db) return;
-        const collectionName = type === 'student' ? 'students' : 'assignments';
         try {
             if (data.id) {
-                const docRef = doc(db, `${basePath}/${collectionName}`, data.id);
+                const docRef = doc(db, `${subjectBasePath}/assignments`, data.id);
                 const { id, ...dataToUpdate } = data;
                 await setDoc(docRef, dataToUpdate, { merge: true });
             } else {
                 const { id, ...dataToAdd } = data;
-                await addDoc(collection(db, `${basePath}/${collectionName}`), { ...dataToAdd, createdAt: serverTimestamp() });
+                await addDoc(collection(db, `${subjectBasePath}/assignments`), { ...dataToAdd, createdAt: serverTimestamp() });
             }
             setModal({ type: null, data: null });
-        } catch (error) { console.error(`Error saving ${type}:`, error); }
+        } catch (error) { console.error(`Error saving assignment:`, error); }
     };
 
-    const handleDelete = async (type, id) => {
+    const handleDeleteAssignment = async (id) => {
         if (!id || !db) return;
-        const collectionName = type === 'student' ? 'students' : 'assignments';
         try {
-            const docRef = doc(db, `${basePath}/${collectionName}`, id);
-            await deleteDoc(docRef);
+            await deleteDoc(doc(db, `${subjectBasePath}/assignments`, id));
             
-            if (type === 'assignment') {
-                const scoresQuery = query(collection(db, `${basePath}/scores`));
-                const scoresSnapshot = await getDocs(scoresQuery);
-                const batch = writeBatch(db);
-                scoresSnapshot.forEach(scoreDoc => {
-                    batch.update(scoreDoc.ref, { [id]: deleteField() });
-                });
-                await batch.commit();
-            }
-            
-            if (type === 'student') {
-                const scoreDocRef = doc(db, `${basePath}/scores`, id);
-                await deleteDoc(scoreDocRef).catch(e => console.log("No scores to delete or error:", e));
-            }
+            const scoresQuery = query(collection(db, `${subjectBasePath}/scores`));
+            const scoresSnapshot = await getDocs(scoresQuery);
+            const batch = writeBatch(db);
+            scoresSnapshot.forEach(scoreDoc => {
+                batch.update(scoreDoc.ref, { [id]: deleteField() });
+            });
+            await batch.commit();
             setModal({ type: null, data: null });
-        } catch (error) { console.error(`Error deleting ${type}:`, error); }
+        } catch (error) { console.error(`Error deleting assignment:`, error); }
     };
 
     const handleExportData = () => {
@@ -738,23 +735,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
         link.click();
         document.body.removeChild(link);
     };
-
-    const handleImportStudents = async (newStudents) => {
-        if (!db) return;
-        const studentsCollectionRef = collection(db, `${basePath}/students`);
-        try {
-            const batch = writeBatch(db);
-            newStudents.forEach(student => {
-                const newDocRef = doc(studentsCollectionRef);
-                batch.set(newDocRef, student);
-            });
-            await batch.commit();
-            setModal({ type: null });
-        } catch (error) {
-            console.error("Error importing students: ", error);
-        }
-    };
-
 
     if (isLoading) return <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"><Icon name="Loader2" className="animate-spin text-teal-500" size={48} /></div>;
 
@@ -791,7 +771,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                                         );
                                     })}
                                     <th className="p-3 text-sm font-semibold text-white border-b border-r border-gray-700 text-center w-28">คะแนนรวม</th>
-                                    <th className="p-3 text-sm font-semibold text-white border-b border-r border-gray-700 w-24 text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -807,12 +786,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                                             </td>
                                         ))}
                                         <td className="p-3 text-center border-b border-r border-gray-700 font-bold text-teal-300">{totalScore}</td>
-                                        <td className="p-2 text-center border-b border-r border-gray-700">
-                                            <div className="flex justify-center gap-2">
-                                               <button onClick={() => setModal({ type: 'editStudent', data: student })} className="p-1.5 text-sky-400 hover:bg-sky-500 hover:text-white rounded"><Icon name="Pencil" size={16}/></button>
-                                               <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'student', id: student.id, name: `${student.firstName} ${student.lastName}` }})} className="p-1.5 text-red-400 hover:bg-red-500 hover:text-white rounded"><Icon name="Trash2" size={16}/></button>
-                                            </div>
-                                        </td>
                                     </tr>
                                    );
                                 })}
@@ -821,9 +794,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                     </div>
                     <footer className="flex items-center justify-between p-4 border-t border-white/10 flex-shrink-0 gap-4">
                         <div className="flex gap-4">
-                            <button onClick={() => setModal({ type: 'addStudent' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="UserPlus" size={16} />เพิ่มนักเรียน</button>
                             <button onClick={() => setModal({ type: 'addAssignment' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="FilePlus" size={16} />เพิ่มรายการเก็บคะแนน</button>
-                            <button onClick={() => setModal({ type: 'importStudents' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="Upload" size={16} />นำเข้ารายชื่อ</button>
                             <button onClick={handleExportData} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="Download" size={16} />ส่งออกคะแนน</button>
                         </div>
                         <button onClick={handleSaveAll} disabled={isSaving} className="flex items-center gap-2 text-sm bg-teal-500/80 hover:bg-teal-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-teal-500/20 disabled:bg-gray-500 disabled:cursor-not-allowed">
@@ -833,12 +804,9 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                 </div>
             </div>
             
-            {modal.type === 'addStudent' && <StudentModal onClose={() => setModal({type: null})} onSave={(data) => handleAddOrEdit('student', data)} />}
-            {modal.type === 'editStudent' && <StudentModal onClose={() => setModal({type: null})} onSave={(data) => handleAddOrEdit('student', data)} initialData={modal.data} />}
-            {modal.type === 'addAssignment' && <AssignmentModal onClose={() => setModal({type: null})} onSave={(data) => handleAddOrEdit('assignment', data)} />}
-            {modal.type === 'editAssignment' && <AssignmentModal onClose={() => setModal({type: null})} onSave={(data) => handleAddOrEdit('assignment', data)} initialData={modal.data} />}
-            {modal.type === 'deleteConfirmation' && <ConfirmationModal onClose={() => setModal({type: null})} onConfirm={() => handleDelete(modal.data.type, modal.data.id)} item={modal.data} />}
-            {modal.type === 'importStudents' && <ImportStudentsModal onClose={() => setModal({type: null})} onImport={handleImportStudents} />}
+            {modal.type === 'addAssignment' && <AssignmentModal onClose={() => setModal({type: null})} onSave={handleAddOrEditAssignment} />}
+            {modal.type === 'editAssignment' && <AssignmentModal onClose={() => setModal({type: null})} onSave={handleAddOrEditAssignment} initialData={modal.data} />}
+            {modal.type === 'deleteConfirmation' && <ConfirmationModal onClose={() => setModal({type: null})} onConfirm={() => handleDeleteAssignment(modal.data.id)} item={modal.data} />}
         </>
     );
 };
@@ -1008,5 +976,134 @@ const ImportStudentsModal = ({ onClose, onImport }) => {
                 </div>
             </div>
         </div>
+    );
+};
+
+const RosterManagementModal = ({ onClose }) => {
+    const [selectedGrade, setSelectedGrade] = React.useState('p1');
+    const [students, setStudents] = React.useState([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [modal, setModal] = React.useState({ type: null, data: null });
+    const rosterBasePath = `artifacts/${appId}/public/data/rosters/${selectedGrade}`;
+
+    React.useEffect(() => {
+        if (!db || !selectedGrade) return;
+        setIsLoading(true);
+        const q = query(collection(db, `${rosterBasePath}/students`), orderBy("studentNumber"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching students:", error);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [selectedGrade, rosterBasePath]);
+
+    const handleAddOrEditStudent = async (data) => {
+        if (!db) return;
+        try {
+            const collectionRef = collection(db, `${rosterBasePath}/students`);
+            if (data.id) {
+                const docRef = doc(collectionRef, data.id);
+                const { id, ...dataToUpdate } = data;
+                await setDoc(docRef, dataToUpdate, { merge: true });
+            } else {
+                await addDoc(collectionRef, data);
+            }
+            setModal({ type: null, data: null });
+        } catch (error) { console.error("Error saving student:", error); }
+    };
+
+    const handleDeleteStudent = async (id) => {
+        if (!id || !db) return;
+        try {
+            await deleteDoc(doc(db, `${rosterBasePath}/students`, id));
+            // Also delete scores for this student across all subjects
+            // This is a complex operation and might be better handled with a cloud function in a real app
+            // For now, we'll just delete from the roster.
+            setModal({ type: null, data: null });
+        } catch (error) { console.error("Error deleting student:", error); }
+    };
+
+    const handleImportStudents = async (newStudents) => {
+        if (!db) return;
+        const collectionRef = collection(db, `${rosterBasePath}/students`);
+        try {
+            const batch = writeBatch(db);
+            newStudents.forEach(student => {
+                const newDocRef = doc(collectionRef);
+                batch.set(newDocRef, student);
+            });
+            await batch.commit();
+            setModal({ type: null });
+        } catch (error) {
+            console.error("Error importing students:", error);
+        }
+    };
+
+    return (
+        <>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col shadow-2xl shadow-black/50">
+                    <header className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
+                        <h2 className="text-2xl font-bold text-white">ทะเบียนนักเรียน</h2>
+                        <button onClick={onClose} className="text-gray-400 hover:text-white"><Icon name="X" size={28} /></button>
+                    </header>
+                    <div className="p-6 flex-shrink-0 border-b border-white/10">
+                        <div className="flex items-center gap-2">
+                            {grades.map((gradeId, index) => (
+                                <button
+                                    key={gradeId}
+                                    onClick={() => setSelectedGrade(gradeId)}
+                                    className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${selectedGrade === gradeId ? 'bg-sky-500 text-white' : 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'}`}
+                                >
+                                    ป.{index + 1}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="p-6 flex-grow overflow-auto">
+                        {isLoading ? (
+                             <div className="flex items-center justify-center h-full"><Icon name="Loader2" className="animate-spin text-sky-400" size={40} /></div>
+                        ) : (
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr>
+                                        <th className="p-3 text-sm font-semibold text-white">เลขที่</th>
+                                        <th className="p-3 text-sm font-semibold text-white">ชื่อ</th>
+                                        <th className="p-3 text-sm font-semibold text-white">นามสกุล</th>
+                                        <th className="p-3 text-sm font-semibold text-white text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {students.map(student => (
+                                        <tr key={student.id} className="border-b border-gray-700/50 hover:bg-white/5">
+                                            <td className="p-3">{student.studentNumber}</td>
+                                            <td className="p-3">{student.firstName}</td>
+                                            <td className="p-3">{student.lastName}</td>
+                                            <td className="p-3 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button onClick={() => setModal({ type: 'editStudent', data: student })} className="p-1.5 text-sky-400 hover:bg-sky-500 hover:text-white rounded"><Icon name="Pencil" size={16}/></button>
+                                                    <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'student', id: student.id, name: `${student.firstName} ${student.lastName}` }})} className="p-1.5 text-red-400 hover:bg-red-500 hover:text-white rounded"><Icon name="Trash2" size={16}/></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                    <footer className="flex items-center justify-end p-4 border-t border-white/10 flex-shrink-0 gap-4">
+                        <button onClick={() => setModal({ type: 'addStudent' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Icon name="UserPlus" size={16} />เพิ่มนักเรียน</button>
+                        <button onClick={() => setModal({ type: 'importStudents' })} className="flex items-center gap-2 text-sm bg-teal-500/80 hover:bg-teal-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300"><Icon name="Upload" size={16} />นำเข้ารายชื่อ</button>
+                    </footer>
+                </div>
+            </div>
+            {modal.type === 'addStudent' && <StudentModal onClose={() => setModal({type: null})} onSave={handleAddOrEditStudent} />}
+            {modal.type === 'editStudent' && <StudentModal onClose={() => setModal({type: null})} onSave={handleAddOrEditStudent} initialData={modal.data} />}
+            {modal.type === 'deleteConfirmation' && <ConfirmationModal onClose={() => setModal({type: null})} onConfirm={() => handleDeleteStudent(modal.data.id)} item={modal.data} />}
+            {modal.type === 'importStudents' && <ImportStudentsModal onClose={() => setModal({type: null})} onImport={handleImportStudents} />}
+        </>
     );
 };
