@@ -17,7 +17,16 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: {
         ...globals.browser,
-        '__app_id': 'readonly' // แจ้งให้ ESLint รู้จัก __app_id
+        // แจ้งให้ ESLint รู้จักตัวแปรทั้งหมดที่เราสร้างขึ้นเอง
+        '__app_id': 'readonly',
+        'app': 'readonly',
+        'db': 'readonly',
+        'appId': 'readonly',
+        'colorThemes': 'readonly',
+        'gradeStyles': 'readonly',
+        'grades': 'readonly',
+        'assignmentCategories': 'readonly',
+        'analyticsCardStyles': 'readonly'
       },
       parserOptions: {
         ecmaVersion: 'latest',

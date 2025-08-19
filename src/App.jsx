@@ -150,7 +150,7 @@ const OverallAnalytics = ({ subjects }) => {
                             const data = doc.data();
                             assignmentsMap.set(doc.id, data);
                             const category = data.category || 'quiz';
-                            if (categoryCounts.hasOwnProperty(category)) {
+                            if (Object.prototype.hasOwnProperty.call(categoryCounts, category)) {
                                 categoryCounts[category]++;
                             }
                         });
