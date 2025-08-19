@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { BookOpen, Calculator, FlaskConical, Code, MessageSquare, History, User, X, Save, FilePlus, Loader2, UserPlus, AlertTriangle, Pencil, Trash2, Palette, Settings, GraduationCap, Square, SquareAsterisk, SquareDot, SquareEqual, SquarePen, SquareM, PlusCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { BookOpen, Calculator, FlaskConical, Code, MessageSquare, History, User, X, Save, FilePlus, Loader2, UserPlus, AlertTriangle, Pencil, Trash2, Palette, Settings, GraduationCap, Square, SquareAsterisk, SquareDot, SquareEqual, SquarePen, SquareM, PlusCircle, Tag, Upload, Download } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, serverTimestamp, query, orderBy, deleteDoc, writeBatch, updateDoc, getDocs, deleteField } from 'firebase/firestore';
+import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, serverTimestamp, query, orderBy, deleteDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
+// import Papa from 'papaparse'; // <-- REMOVED: We will load this from a script tag instead.
 
 // --- Firebase Configuration ---
-// This configuration is used to connect to your Firebase project.
 const firebaseConfig = {
     apiKey: "AIzaSyCGy9AqyJTjJSVJidVPQ_3H4xqDl81K7uU",
     authDomain: "banwanghinscore.firebaseapp.com",
@@ -19,11 +19,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // --- App ID for Firestore Path ---
-// This creates a unique path for this app's data in Firestore.
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'banwanghin-lms-dev';
 
-// --- Theming and Initial Data ---
-// Defines the color themes for subject cards for better visual distinction.
+// --- Theming and Data Constants ---
 const colorThemes = {
     teal: { bg: 'bg-teal-500/10', border: 'border-teal-500/30', shadow: 'hover:shadow-teal-500/20', text: 'text-teal-300' },
     sky: { bg: 'bg-sky-500/10', border: 'border-sky-500/30', shadow: 'hover:shadow-sky-500/20', text: 'text-sky-300' },
@@ -33,7 +31,6 @@ const colorThemes = {
     lime: { bg: 'bg-lime-500/10', border: 'border-lime-500/30', shadow: 'hover:shadow-lime-500/20', text: 'text-lime-300' },
 };
 
-// Defines unique icons and colors for each grade level.
 const gradeStyles = {
     p1: { icon: Square, color: 'text-rose-400' },
     p2: { icon: SquareDot, color: 'text-orange-400' },
@@ -44,8 +41,14 @@ const gradeStyles = {
 };
 const grades = Object.keys(gradeStyles);
 
+const assignmentCategories = {
+  quiz: { label: 'เก็บคะแนน', color: 'bg-sky-500/20 text-sky-300', borderColor: 'border-sky-500/30' },
+  midterm: { label: 'สอบกลางภาค', color: 'bg-amber-500/20 text-amber-300', borderColor: 'border-amber-500/30' },
+  final: { label: 'สอบปลายภาค', color: 'bg-rose-500/20 text-rose-300', borderColor: 'border-rose-500/30' },
+};
+
+
 // === MAIN APP COMPONENT ===
-// This is the root component that orchestrates the entire application.
 export default function App() {
     const [subjects, setSubjects] = useState([]);
     const [modal, setModal] = useState({ type: null, data: null });
@@ -63,6 +66,18 @@ export default function App() {
         return () => unsubscribe();
     }, []);
 
+    // NEW: Effect to load the Papaparse CSV library from a CDN
+    useEffect(() => {
+        const scriptId = 'papaparse-script';
+        if (document.getElementById(scriptId)) return; // Avoid adding script multiple times
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js";
+        script.async = true;
+        document.body.appendChild(script);
+    }, []);
+
+
     // Handlers for managing modal states.
     const handleCardClick = (subject) => setModal({ type: 'selectGrade', data: subject });
     const handleGradeSelect = (subject, grade) => setModal({ type: 'classDetail', data: { subject, grade } });
@@ -70,7 +85,6 @@ export default function App() {
 
     return (
         <div className="min-h-screen bg-gray-900 text-white font-sans relative overflow-hidden">
-            {/* Background animated blobs for aesthetic appeal */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
                 <div className="absolute w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] bg-teal-500/20 rounded-full filter blur-3xl animate-blob animation-delay-2000 top-1/4 left-1/4"></div>
                 <div className="absolute w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] bg-purple-500/20 rounded-full filter blur-3xl animate-blob animation-delay-4000 bottom-1/4 right-1/4"></div>
@@ -82,13 +96,11 @@ export default function App() {
                     <button onClick={() => setModal({type: 'manageSubjects'})} className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Settings size={16}/>จัดการวิชา</button>
                 </header>
                 
-                {/* Grid for displaying subject cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {subjects.map((subject) => (<ClassCard key={subject.id} subject={subject} onClick={() => handleCardClick(subject)}/>))}
                 </div>
             </main>
             
-            {/* Conditional rendering of modals based on the 'modal' state */}
             {modal.type === 'selectGrade' && <GradeSelectionModal subject={modal.data} onSelect={handleGradeSelect} onClose={handleCloseModal} />}
             {modal.type === 'classDetail' && (<ClassDetailView subject={modal.data.subject} grade={modal.data.grade} onClose={handleCloseModal}/>)}
             {modal.type === 'manageSubjects' && <SubjectManagementModal subjects={subjects} onClose={handleCloseModal}/>}
@@ -98,7 +110,6 @@ export default function App() {
 
 // === CHILD COMPONENTS ===
 
-// Component for displaying a single subject card on the dashboard.
 const ClassCard = ({ subject, onClick }) => {
     const theme = colorThemes[subject.colorTheme] || colorThemes.teal;
     const Icon = { BookOpen, Calculator, FlaskConical, Code, MessageSquare, History }[subject.iconName] || BookOpen;
@@ -113,12 +124,10 @@ const ClassCard = ({ subject, onClick }) => {
     );
 };
 
-// Modal for selecting a grade level after clicking a subject card.
 const GradeSelectionModal = ({ subject, onSelect, onClose }) => {
     const [gradeCounts, setGradeCounts] = useState({});
     const [isLoading, setIsLoading] = useState(true);
 
-    // Effect to fetch student counts for each grade to display on the selection buttons.
     useEffect(() => {
         const fetchCounts = async () => {
             setIsLoading(true);
@@ -128,7 +137,7 @@ const GradeSelectionModal = ({ subject, onSelect, onClose }) => {
                 try {
                     const snapshot = await getDocs(collection(db, studentsPath));
                     counts[gradeId] = snapshot.size;
-                } catch (error) { counts[gradeId] = 0; }
+                } catch (error) { console.error(error); counts[gradeId] = 0; }
             });
             await Promise.all(gradePromises);
             setGradeCounts(counts);
@@ -163,19 +172,17 @@ const GradeSelectionModal = ({ subject, onSelect, onClose }) => {
     );
 };
 
-// Modal for managing (listing, triggering edit/delete) subjects.
 const SubjectManagementModal = ({subjects, onClose}) => {
     const [editingSubject, setEditingSubject] = useState(null);
 
-    // Handles saving a new or updated subject to Firestore.
     const handleSave = async (subjectData) => {
         const subjectsMetaPath = `artifacts/${appId}/public/data/subjects_meta`;
         try {
-            if (subjectData.id) { // Update existing subject
+            if (subjectData.id) {
                 const docRef = doc(db, subjectsMetaPath, subjectData.id);
                 const { id, ...dataToUpdate } = subjectData;
                 await setDoc(docRef, dataToUpdate, { merge: true });
-            } else { // Add new subject
+            } else {
                 const { id, ...dataToAdd } = subjectData;
                 await addDoc(collection(db, subjectsMetaPath), { ...dataToAdd, createdAt: serverTimestamp() });
             }
@@ -185,26 +192,19 @@ const SubjectManagementModal = ({subjects, onClose}) => {
         }
     };
     
-    // Handles deleting a subject from Firestore.
     const handleDelete = async (id) => {
-        // NOTE: In a real app, using a custom modal instead of window.confirm is better for UX.
-        // This is a placeholder for simplicity.
-        // if (!window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบวิชานี้? ข้อมูลทั้งหมดที่เกี่ยวข้องจะถูกลบอย่างถาวร")) return;
         try {
             const subjectsMetaPath = `artifacts/${appId}/public/data/subjects_meta`;
             await deleteDoc(doc(db, subjectsMetaPath, id));
-            // In a full-scale app, you would also delete all associated sub-collections here.
         } catch (error) {
             console.error("Error deleting subject:", error);
         }
     }
 
-    // Renders the edit form if a subject is being edited.
     if (editingSubject) {
         return <SubjectEditForm subject={editingSubject} onSave={handleSave} onCancel={() => setEditingSubject(null)} />
     }
 
-    // Renders the list of subjects.
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl shadow-black/50">
@@ -222,7 +222,6 @@ const SubjectManagementModal = ({subjects, onClose}) => {
                                 </div>
                                 <div className="flex gap-2">
                                     <button onClick={() => setEditingSubject(sub)} className="p-2 text-sky-400 hover:bg-sky-500/20 rounded"><Pencil size={18}/></button>
-                                    {/* This button should trigger a confirmation modal */}
                                     <button onClick={() => handleDelete(sub.id)} className="p-2 text-red-400 hover:bg-red-500/20 rounded"><Trash2 size={18}/></button>
                                 </div>
                             </li>
@@ -239,7 +238,6 @@ const SubjectManagementModal = ({subjects, onClose}) => {
     );
 };
 
-// Form for creating a new subject or editing an existing one.
 const SubjectEditForm = ({ subject, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
         name: subject.name || '',
@@ -290,7 +288,6 @@ const SubjectEditForm = ({ subject, onSave, onCancel }) => {
     );
 };
 
-// Main view for displaying the class details, including students, assignments, and scores.
 const ClassDetailView = ({ subject, grade, onClose }) => {
     const [students, setStudents] = useState([]);
     const [assignments, setAssignments] = useState([]);
@@ -300,7 +297,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
     const [modal, setModal] = useState({ type: null, data: null });
     const basePath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}`;
 
-    // Effect to subscribe to real-time updates for students, assignments, and scores.
     useEffect(() => {
         setIsLoading(true);
         const studentsQuery = query(collection(db, `${basePath}/students`), orderBy("studentNumber"));
@@ -318,7 +314,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
         return () => unsubscribers.forEach(unsub => unsub());
     }, [basePath]);
 
-    // Handles changes to score inputs, updating local state.
     const handleScoreChange = (studentId, assignmentId, value) => {
         const newScores = JSON.parse(JSON.stringify(scores));
         if (!newScores[studentId]) newScores[studentId] = {};
@@ -326,7 +321,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
         setScores(newScores);
     };
 
-    // Saves all score changes to Firestore in a single batch write.
     const handleSaveAll = async () => {
         setIsSaving(true);
         try {
@@ -334,7 +328,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
             Object.keys(scores).forEach(studentId => {
                 const studentScores = scores[studentId];
                 const docRef = doc(db, `${basePath}/scores`, studentId);
-                // Use set with merge to only update fields, not overwrite the whole doc
                 batch.set(docRef, studentScores, { merge: true });
             });
             await batch.commit();
@@ -342,15 +335,14 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
         finally { setIsSaving(false); }
     };
 
-    // Generic handler for adding or editing students/assignments.
     const handleAddOrEdit = async (type, data) => {
         const collectionName = type === 'student' ? 'students' : 'assignments';
         try {
-            if (data.id) { // Edit
+            if (data.id) {
                 const docRef = doc(db, `${basePath}/${collectionName}`, data.id);
                 const { id, ...dataToUpdate } = data;
                 await setDoc(docRef, dataToUpdate, { merge: true });
-            } else { // Add
+            } else {
                 const { id, ...dataToAdd } = data;
                 await addDoc(collection(db, `${basePath}/${collectionName}`), { ...dataToAdd, createdAt: serverTimestamp() });
             }
@@ -358,7 +350,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
         } catch (error) { console.error(`Error saving ${type}:`, error); }
     };
 
-    // Generic handler for deleting students/assignments and their related data.
     const handleDelete = async (type, id) => {
         if (!id) return;
         const collectionName = type === 'student' ? 'students' : 'assignments';
@@ -366,7 +357,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
             const docRef = doc(db, `${basePath}/${collectionName}`, id);
             await deleteDoc(docRef);
             
-            // If deleting an assignment, remove its score field from all student score documents.
             if (type === 'assignment') {
                 const scoresQuery = query(collection(db, `${basePath}/scores`));
                 const scoresSnapshot = await getDocs(scoresQuery);
@@ -377,7 +367,6 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                 await batch.commit();
             }
             
-            // If deleting a student, remove their entire score document.
             if (type === 'student') {
                 const scoreDocRef = doc(db, `${basePath}/scores`, id);
                 await deleteDoc(scoreDocRef).catch(e => console.log("No scores to delete or error:", e));
@@ -385,6 +374,40 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
             setModal({ type: null, data: null });
         } catch (error) { console.error(`Error deleting ${type}:`, error); }
     };
+
+    const handleExportData = () => {
+        const headers = ['เลขที่', 'ชื่อ', 'สกุล', ...assignments.map(a => `${a.name} (${a.maxScore})`)];
+        const rows = students.map(student => {
+            const studentScores = assignments.map(assign => scores[student.id]?.[assign.id] ?? '');
+            return [student.studentNumber, student.firstName, student.lastName, ...studentScores];
+        });
+
+        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+        const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${subject.name}_ป${grade.replace('p','')}_scores.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleImportStudents = async (newStudents) => {
+        const studentsCollectionRef = collection(db, `${basePath}/students`);
+        try {
+            const batch = writeBatch(db);
+            newStudents.forEach(student => {
+                const newDocRef = doc(studentsCollectionRef);
+                batch.set(newDocRef, student);
+            });
+            await batch.commit();
+            setModal({ type: null });
+        } catch (error) {
+            console.error("Error importing students: ", error);
+        }
+    };
+
 
     if (isLoading) return <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"><Loader2 className="animate-spin text-teal-500" size={48} /></div>;
 
@@ -402,17 +425,24 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                                 <tr>
                                     <th className="p-3 text-sm font-semibold text-white border-b border-r border-gray-700 w-16 text-center">เลขที่</th>
                                     <th className="p-3 text-sm font-semibold text-white border-b border-r border-gray-700 min-w-[250px]">ชื่อ-สกุล</th>
-                                    {assignments.map(assign => (
-                                        <th key={assign.id} className="p-3 text-sm font-semibold text-white border-b border-r border-gray-700 text-center w-36 group relative">
-                                            {assign.name}<span className="block text-xs text-gray-400 font-normal">({assign.maxScore} คะแนน)</span>
-                                            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => setModal({ type: 'editAssignment', data: assign })} className="p-1 bg-sky-500/50 hover:bg-sky-500 rounded"><Pencil size={12}/></button>
-                                                <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'assignment', id: assign.id, name: assign.name }})} className="p-1 bg-red-500/50 hover:bg-red-500 rounded"><Trash2 size={12}/></button>
-                                            </div>
-                                        </th>
-                                    ))}
-                                    <th className="p-3 text-sm font-semibold text-white border-b border-gray-700 text-center w-28">คะแนนรวม</th>
-                                    <th className="p-3 text-sm font-semibold text-white border-b border-gray-700 w-24 text-center">Actions</th>
+                                    {assignments.map(assign => {
+                                        const category = assignmentCategories[assign.category] || assignmentCategories.quiz;
+                                        return (
+                                            <th key={assign.id} className={`p-3 text-sm font-semibold text-white border-b border-r border-gray-700 text-center w-40 group relative`}>
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <span>{assign.name}</span>
+                                                    <span className="block text-xs text-gray-400 font-normal mb-1">({assign.maxScore} คะแนน)</span>
+                                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${category.color}`}>{category.label}</span>
+                                                </div>
+                                                <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => setModal({ type: 'editAssignment', data: assign })} className="p-1 bg-sky-500/50 hover:bg-sky-500 rounded"><Pencil size={12}/></button>
+                                                    <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'assignment', id: assign.id, name: assign.name }})} className="p-1 bg-red-500/50 hover:bg-red-500 rounded"><Trash2 size={12}/></button>
+                                                </div>
+                                            </th>
+                                        );
+                                    })}
+                                    <th className="p-3 text-sm font-semibold text-white border-b border-r border-gray-700 text-center w-28">คะแนนรวม</th>
+                                    <th className="p-3 text-sm font-semibold text-white border-b border-r border-gray-700 w-24 text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -444,6 +474,8 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                         <div className="flex gap-4">
                             <button onClick={() => setModal({ type: 'addStudent' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><UserPlus size={16} />เพิ่มนักเรียน</button>
                             <button onClick={() => setModal({ type: 'addAssignment' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><FilePlus size={16} />เพิ่มรายการเก็บคะแนน</button>
+                            <button onClick={() => setModal({ type: 'importStudents' })} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Upload size={16} />นำเข้ารายชื่อ</button>
+                            <button onClick={handleExportData} className="flex items-center gap-2 text-sm bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-gray-600"><Download size={16} />ส่งออกคะแนน</button>
                         </div>
                         <button onClick={handleSaveAll} disabled={isSaving} className="flex items-center gap-2 text-sm bg-teal-500/80 hover:bg-teal-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-teal-500/20 disabled:bg-gray-500 disabled:cursor-not-allowed">
                             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}{isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
@@ -452,17 +484,16 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                 </div>
             </div>
             
-            {/* Modals for adding/editing students and assignments */}
             {modal.type === 'addStudent' && <StudentModal onClose={() => setModal({type: null})} onSave={(data) => handleAddOrEdit('student', data)} />}
             {modal.type === 'editStudent' && <StudentModal onClose={() => setModal({type: null})} onSave={(data) => handleAddOrEdit('student', data)} initialData={modal.data} />}
             {modal.type === 'addAssignment' && <AssignmentModal onClose={() => setModal({type: null})} onSave={(data) => handleAddOrEdit('assignment', data)} />}
             {modal.type === 'editAssignment' && <AssignmentModal onClose={() => setModal({type: null})} onSave={(data) => handleAddOrEdit('assignment', data)} initialData={modal.data} />}
             {modal.type === 'deleteConfirmation' && <ConfirmationModal onClose={() => setModal({type: null})} onConfirm={() => handleDelete(modal.data.type, modal.data.id)} item={modal.data} />}
+            {modal.type === 'importStudents' && <ImportStudentsModal onClose={() => setModal({type: null})} onImport={handleImportStudents} />}
         </>
     );
 };
 
-// Modal form for adding or editing a student.
 const StudentModal = ({ onClose, onSave, initialData = null }) => {
     const [studentNumber, setStudentNumber] = useState(initialData?.studentNumber || '');
     const [firstName, setFirstName] = useState(initialData?.firstName || '');
@@ -482,25 +513,52 @@ const StudentModal = ({ onClose, onSave, initialData = null }) => {
     );
 };
 
-// Modal form for adding or editing an assignment.
 const AssignmentModal = ({ onClose, onSave, initialData = null }) => {
     const [name, setName] = useState(initialData?.name || '');
     const [maxScore, setMaxScore] = useState(initialData?.maxScore || 10);
+    const [category, setCategory] = useState(initialData?.category || 'quiz');
     const isEditMode = !!initialData;
-    const handleSubmit = (e) => { e.preventDefault(); if (name.trim() && maxScore > 0) { onSave({ id: initialData?.id, name, maxScore: parseInt(maxScore, 10) }); }};
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (name.trim() && maxScore > 0) {
+            onSave({ id: initialData?.id, name, maxScore: parseInt(maxScore, 10), category });
+        }
+    };
+
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"><div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-xl font-bold mb-4">{isEditMode ? 'แก้ไขรายการเก็บคะแนน' : 'เพิ่มรายการเก็บคะแนนใหม่'}</h3>
-            <form onSubmit={handleSubmit}>
-                <div className="mb-4"><label htmlFor="assignmentName" className="block text-sm font-medium text-gray-300 mb-1">ชื่องาน</label><input type="text" id="assignmentName" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required /></div>
-                <div className="mb-6"><label htmlFor="maxScore" className="block text-sm font-medium text-gray-300 mb-1">คะแนนเต็ม</label><input type="number" id="maxScore" value={maxScore} onChange={(e) => setMaxScore(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required min="1" /></div>
-                <div className="flex justify-end gap-4"><button type="button" onClick={onClose} className="py-2 px-4 text-gray-300 hover:text-white">ยกเลิก</button><button type="submit" className="py-2 px-4 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg transition-colors">{isEditMode ? 'บันทึกการแก้ไข' : 'สร้างรายการ'}</button></div>
-            </form>
-        </div></div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                <h3 className="text-xl font-bold mb-4">{isEditMode ? 'แก้ไขรายการเก็บคะแนน' : 'เพิ่มรายการเก็บคะแนนใหม่'}</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label htmlFor="assignmentName" className="block text-sm font-medium text-gray-300 mb-1">ชื่องาน</label>
+                        <input type="text" id="assignmentName" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required />
+                    </div>
+                    <div>
+                        <label htmlFor="maxScore" className="block text-sm font-medium text-gray-300 mb-1">คะแนนเต็ม</label>
+                        <input type="number" id="maxScore" value={maxScore} onChange={(e) => setMaxScore(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required min="1" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">ประเภท</label>
+                        <div className="flex gap-2">
+                            {Object.entries(assignmentCategories).map(([key, value]) => (
+                                <button type="button" key={key} onClick={() => setCategory(key)} className={`flex-1 text-sm py-2 px-3 rounded-lg border transition-colors ${category === key ? `${value.borderColor} ${value.color} font-bold` : 'border-gray-600 text-gray-400 hover:bg-gray-700'}`}>
+                                    {value.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-4 pt-4">
+                        <button type="button" onClick={onClose} className="py-2 px-4 text-gray-300 hover:text-white">ยกเลิก</button>
+                        <button type="submit" className="py-2 px-4 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg transition-colors">{isEditMode ? 'บันทึกการแก้ไข' : 'สร้างรายการ'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 };
 
-// A generic confirmation modal for delete actions.
 const ConfirmationModal = ({ onClose, onConfirm, item }) => {
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -509,6 +567,96 @@ const ConfirmationModal = ({ onClose, onConfirm, item }) => {
                 <h3 className="text-xl font-bold mb-2">ยืนยันการลบ</h3>
                 <p className="text-gray-300 mb-6">คุณแน่ใจหรือไม่ว่าต้องการลบ "{item.name}"? <br/><span className="text-red-400 font-semibold">การกระทำนี้ไม่สามารถย้อนกลับได้</span></p>
                 <div className="flex justify-center gap-4"><button onClick={onClose} className="py-2 px-6 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors">ยกเลิก</button><button onClick={() => { onConfirm(); onClose(); }} className="py-2 px-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">ยืนยันการลบ</button></div>
+            </div>
+        </div>
+    );
+};
+
+const ImportStudentsModal = ({ onClose, onImport }) => {
+    const [file, setFile] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [error, setError] = useState('');
+    const fileInputRef = useRef(null);
+
+    const handleFileChange = (event) => {
+        const selectedFile = event.target.files[0];
+        if (selectedFile && (selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv'))) {
+            setFile(selectedFile);
+            setError('');
+        } else {
+            setFile(null);
+            setError('กรุณาเลือกไฟล์ .csv เท่านั้น');
+        }
+    };
+
+    const handleProcessFile = () => {
+        if (!file) {
+            setError('กรุณาเลือกไฟล์ก่อน');
+            return;
+        }
+        if (!window.Papa) {
+            setError('Library สำหรับประมวลผลไฟล์ยังไม่พร้อม โปรดรอสักครู่แล้วลองอีกครั้ง');
+            return;
+        }
+
+        setIsProcessing(true);
+        window.Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                const requiredHeaders = ['studentNumber', 'firstName', 'lastName'];
+                const actualHeaders = results.meta.fields;
+                const hasAllHeaders = requiredHeaders.every(h => actualHeaders.includes(h));
+
+                if (!hasAllHeaders) {
+                    setError(`ไฟล์ CSV ต้องมีคอลัมน์: ${requiredHeaders.join(', ')}`);
+                    setIsProcessing(false);
+                    return;
+                }
+
+                const studentsData = results.data.map(row => ({
+                    studentNumber: parseInt(row.studentNumber, 10),
+                    firstName: row.firstName.trim(),
+                    lastName: row.lastName.trim(),
+                })).filter(s => !isNaN(s.studentNumber) && s.firstName && s.lastName);
+
+                onImport(studentsData);
+                setIsProcessing(false);
+            },
+            error: (err) => {
+                setError('เกิดข้อผิดพลาดในการอ่านไฟล์: ' + err.message);
+                setIsProcessing(false);
+            }
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+                <h3 className="text-xl font-bold mb-4">นำเข้ารายชื่อนักเรียนจากไฟล์ CSV</h3>
+                <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm rounded-lg p-3 mb-4">
+                    <p className="font-bold">คำแนะนำ:</p>
+                    <ul className="list-disc list-inside mt-1">
+                        <li>ไฟล์ต้องเป็นประเภท .csv</li>
+                        <li>ต้องมีคอลัมน์ `studentNumber`, `firstName`, `lastName`</li>
+                        <li>แถวแรกสุด (Header) ต้องเป็นชื่อคอลัมน์ตามลำดับ</li>
+                    </ul>
+                </div>
+                
+                <input type="file" accept=".csv" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
+                <button onClick={() => fileInputRef.current.click()} className="w-full text-center p-4 border-2 border-dashed border-gray-600 rounded-lg hover:bg-gray-700/50 transition-colors">
+                    {file ? `เลือกไฟล์แล้ว: ${file.name}` : 'คลิกเพื่อเลือกไฟล์'}
+                </button>
+
+                {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+
+                <div className="flex justify-end gap-4 mt-6">
+                    <button type="button" onClick={onClose} className="py-2 px-4 text-gray-300 hover:text-white">ยกเลิก</button>
+                    <button onClick={handleProcessFile} disabled={!file || isProcessing} className="flex items-center gap-2 py-2 px-4 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
+                        {isProcessing ? <Loader2 className="animate-spin" size={16}/> : <Upload size={16}/>}
+                        {isProcessing ? 'กำลังประมวลผล...' : 'นำเข้าข้อมูล'}
+                    </button>
+                </div>
             </div>
         </div>
     );

@@ -15,7 +15,10 @@ export default defineConfig([
     ],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        '__app_id': 'readonly' // แจ้งให้ ESLint รู้จัก __app_id
+      },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
@@ -23,7 +26,11 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // ปรับกฎ: เปลี่ยนจาก error เป็นแค่เตือน (warn) และอนุญาตให้มีตัวแปรที่ไม่ได้ใช้ใน argument ของฟังก์ชันได้ (เช่น catch(error))
+      'no-unused-vars': ['warn', { 
+        varsIgnorePattern: '^[A-Z_]',
+        args: 'none' 
+      }],
     },
   },
 ])
