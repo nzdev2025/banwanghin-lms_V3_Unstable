@@ -1,23 +1,24 @@
 import React from 'react';
+import { createRoot } from 'react-dom/client';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, serverTimestamp, query, orderBy, deleteDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
+import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, serverTimestamp, query, orderBy, deleteDoc, writeBatch, getDocs, deleteField, limit } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+
+// --- Main App Component ---
+// This file contains all the React components for the Ban Wang Hin LMS application.
+// For clarity in this self-contained example, components are defined within this single file.
 
 // --- SVG Icons (from lucide-react) ---
 // Using inline SVGs to make the component self-contained.
 const Icon = ({ name, ...props }) => {
   const icons = {
     BookOpen: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
-    Calculator: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><line x1="16" x2="16" y1="10" y2="10"/><line x1="12" x2="12" y1="10" y2="10"/><line x1="8" x2="8" y1="10" y2="10"/><line x1="12" x2="12" y1="14" y2="18"/><line x1="8" x2="8" y1="14" y2="18"/></svg>,
-    FlaskConical: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v7.31"/><path d="M14 9.31V2"/><path d="M10 13.31S6 18 6 22h12c0-4-4-8.69-4-8.69"/><path d="M6 16h12"/></svg>,
-    Code: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>,
-    MessageSquare: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+    Crown: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>,
     History: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M12 8v4l2 2"/></svg>,
     User: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
     Users: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
     Users2: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 19a6 6 0 0 0-12 0"/><circle cx="8" cy="10" r="4"/><path d="M22 19a6 6 0 0 0-6-6 4 4 0 1 0 0-8"/></svg>,
     Target: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
-    PieChart: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>,
     X: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
     Save: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
     FilePlus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>,
@@ -70,6 +71,23 @@ try {
 // --- App ID for Firestore Path ---
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'banwanghin-lms-dev';
 
+// --- Activity Logging Helper ---
+const logActivity = async (type, message, details = {}) => {
+    if (!db) return;
+    try {
+        const logPath = `artifacts/${appId}/public/data/activity_log`;
+        await addDoc(collection(db, logPath), {
+            type,
+            message,
+            details,
+            timestamp: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error logging activity:", error);
+    }
+};
+
+
 // --- Theming and Data Constants ---
 const colorThemes = {
     teal: { bg: 'bg-teal-500/10', border: 'border-teal-500/30', shadow: 'hover:shadow-teal-500/20', text: 'text-teal-300', hex: '#2dd4bf' },
@@ -107,7 +125,191 @@ const analyticsCardStyles = [
     { gradient: 'from-fuchsia-500/70 to-purple-500/70', border: 'border-fuchsia-400' },
 ];
 
-// === NEW & UPDATED COMPONENTS ===
+// --- NEW COMPONENT: TopStudentsLeaderboard ---
+const TopStudentsLeaderboard = ({ subjects }) => {
+    const [topStudents, setTopStudents] = React.useState([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const calculateTopStudents = async () => {
+            if (!db || subjects.length === 0) {
+                setIsLoading(false);
+                return;
+            }
+            setIsLoading(true);
+
+            const allTopStudents = [];
+
+            for (const grade of grades) {
+                const studentsSnap = await getDocs(collection(db, `artifacts/${appId}/public/data/rosters/${grade}/students`));
+                const studentsInGrade = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                if (studentsInGrade.length === 0) continue;
+
+                let topStudentForGrade = null;
+                let maxScorePercentage = -1;
+
+                for (const student of studentsInGrade) {
+                    let totalEarned = 0;
+                    let totalMax = 0;
+
+                    for (const subject of subjects) {
+                        const assignmentsSnap = await getDocs(collection(db, `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}/assignments`));
+                        const scoresSnap = await getDocs(collection(db, `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}/scores`));
+                        
+                        const studentScoresDoc = scoresSnap.docs.find(doc => doc.id === student.id);
+                        const studentScores = studentScoresDoc ? studentScoresDoc.data() : {};
+
+                        assignmentsSnap.forEach(assignDoc => {
+                            const assignment = assignDoc.data();
+                            totalMax += assignment.maxScore || 0;
+                            totalEarned += studentScores[assignDoc.id] || 0;
+                        });
+                    }
+                    
+                    const scorePercentage = totalMax > 0 ? (totalEarned / totalMax) * 100 : 0;
+
+                    if (scorePercentage > maxScorePercentage) {
+                        maxScorePercentage = scorePercentage;
+                        topStudentForGrade = {
+                            ...student,
+                            grade: grade,
+                            score: maxScorePercentage,
+                        };
+                    }
+                }
+                if (topStudentForGrade) {
+                    allTopStudents.push(topStudentForGrade);
+                }
+            }
+            setTopStudents(allTopStudents);
+            setIsLoading(false);
+        };
+
+        calculateTopStudents();
+    }, [subjects]);
+
+    return (
+        <div className="p-6 rounded-2xl backdrop-blur-lg bg-gray-800/30 border border-gray-700/50">
+            <h3 className="text-lg font-bold text-white mb-4">นักเรียนยอดเยี่ยม (Top Student)</h3>
+            {isLoading ? (
+                <div className="space-y-3">
+                    {Array(6).fill(0).map((_, i) => (
+                        <div key={i} className="h-16 bg-gray-700/50 rounded-lg animate-pulse"></div>
+                    ))}
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {grades.map((grade, index) => {
+                        const student = topStudents.find(s => s.grade === grade);
+                        return (
+                            <div key={grade} className="bg-gradient-to-r from-amber-500/20 to-yellow-500/10 p-3 rounded-lg border border-amber-400/30 flex items-center gap-4">
+                                <div className="bg-amber-400/20 p-2 rounded-full">
+                                    <Icon name="Crown" size={24} className="text-amber-300" />
+                                </div>
+                                {student ? (
+                                    <div className="flex-grow">
+                                        <p className="font-bold text-white truncate">{student.firstName} {student.lastName}</p>
+                                        <p className="text-xs text-gray-400">ป.{grade.replace('p','')} - คะแนนรวม {student.score.toFixed(2)}%</p>
+                                    </div>
+                                ) : (
+                                     <div className="flex-grow">
+                                        <p className="font-bold text-gray-500">ไม่มีข้อมูล</p>
+                                        <p className="text-xs text-gray-600">ป.{grade.replace('p','')}</p>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+const RecentActivityFeed = () => {
+    const [activities, setActivities] = React.useState([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        if (!db) return;
+        const logPath = `artifacts/${appId}/public/data/activity_log`;
+        const q = query(collection(db, logPath), orderBy("timestamp", "desc"), limit(10));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setActivities(activitiesData);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching activity log:", error);
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const timeSince = (date) => {
+        if (!date || !date.toDate) return '';
+        const seconds = Math.floor((new Date() - date.toDate()) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return `${Math.floor(interval)} ปีที่แล้ว`;
+        interval = seconds / 2592000;
+        if (interval > 1) return `${Math.floor(interval)} เดือนที่แล้ว`;
+        interval = seconds / 86400;
+        if (interval > 1) return `${Math.floor(interval)} วันที่แล้ว`;
+        interval = seconds / 3600;
+        if (interval > 1) return `${Math.floor(interval)} ชั่วโมงที่แล้ว`;
+        interval = seconds / 60;
+        if (interval > 1) return `${Math.floor(interval)} นาทีที่แล้ว`;
+        return "เมื่อสักครู่";
+    };
+
+    const iconMap = {
+        SUBJECT: 'BookOpen',
+        STUDENT: 'User',
+        ASSIGNMENT: 'FilePlus',
+        SCORE: 'Save',
+        DEFAULT: 'History'
+    };
+
+    return (
+        <div className="p-6 rounded-2xl backdrop-blur-lg bg-gray-800/30 border border-gray-700/50 h-full">
+            <h3 className="text-lg font-bold text-white mb-4">รายการเคลื่อนไหวล่าสุด</h3>
+            {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                    <Icon name="Loader2" className="animate-spin text-gray-400" size={32} />
+                </div>
+            ) : activities.length === 0 ? (
+                 <div className="text-center py-10 h-full flex flex-col justify-center items-center">
+                    <Icon name="History" className="mx-auto text-gray-500" size={40}/>
+                    <p className="mt-2 text-sm text-gray-500">ยังไม่มีรายการเคลื่อนไหว</p>
+                </div>
+            ) : (
+                <ul className="space-y-4">
+                    {activities.map(activity => {
+                        const activityType = activity.type.split('_')[0];
+                        const iconName = iconMap[activityType] || iconMap.DEFAULT;
+                        return (
+                            <li key={activity.id} className="flex items-start gap-3">
+                                <div className="bg-gray-700/50 p-2 rounded-full mt-1">
+                                    <Icon name={iconName} size={16} className="text-gray-300" />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-white leading-tight" dangerouslySetInnerHTML={{ __html: activity.message }}></p>
+                                    <p className="text-xs text-gray-400 mt-0.5">{timeSince(activity.timestamp)}</p>
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </div>
+    );
+};
+
+
+// --- Dashboard Analytics Components ---
 
 const OverallAnalytics = ({ subjects }) => {
     const [stats, setStats] = React.useState({ totalStudents: 0, overallAverage: 0, isLoading: true });
@@ -128,7 +330,6 @@ const OverallAnalytics = ({ subjects }) => {
             const subjectAverages = [];
             const categoryCounts = { quiz: 0, midterm: 0, final: 0 };
 
-            // Fetch all student counts from central rosters first
             const studentCountPromises = grades.map(grade => getDocs(collection(db, `artifacts/${appId}/public/data/rosters/${grade}/students`)));
             const studentCountSnapshots = await Promise.all(studentCountPromises);
             studentCountSnapshots.forEach(snap => totalStudents += snap.size);
@@ -200,13 +401,13 @@ const OverallAnalytics = ({ subjects }) => {
     }, [subjects]);
 
     return (
-        <div className="mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  <KeyMetricCard icon="BookOpen" title="จำนวนวิชาทั้งหมด" value={subjects.length} isLoading={stats.isLoading} theme={colorThemes.teal} />
                  <KeyMetricCard icon="Users" title="จำนวนนักเรียนในระบบ" value={stats.totalStudents} isLoading={stats.isLoading} theme={colorThemes.sky} />
                  <KeyMetricCard icon="Target" title="ค่าเฉลี่ยคะแนนรวม" value={`${stats.overallAverage.toFixed(2)}%`} isLoading={stats.isLoading} theme={colorThemes.purple} />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <SubjectPerformanceChart data={barChartData} isLoading={stats.isLoading} />
                 <AssignmentTypeDistributionChart data={radarChartData} isLoading={stats.isLoading} />
             </div>
@@ -260,7 +461,7 @@ const SubjectPerformanceChart = ({ data, isLoading }) => {
                 <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 60 }}>
                     <defs>
                         {Object.keys(colorThemes).map((key) => (
-                            <linearGradient id={`color-${key}`} x1="0" y1="0" x2="0" y2="1">
+                            <linearGradient key={key} id={`color-${key}`} x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor={colorThemes[key].hex} stopOpacity={0.8}/>
                                 <stop offset="95%" stopColor={colorThemes[key].hex} stopOpacity={0.2}/>
                             </linearGradient>
@@ -321,8 +522,8 @@ const AssignmentTypeDistributionChart = ({ data, isLoading }) => {
 };
 
 
-// === MAIN APP COMPONENT ===
-export default function App() {
+// --- Core App Layout ---
+function App() {
     const [subjects, setSubjects] = React.useState([]);
     const [modal, setModal] = React.useState({ type: null, data: null });
     
@@ -342,7 +543,6 @@ export default function App() {
         return () => unsubscribe();
     }, []);
 
-    // Effect for loading PapaParse script
     React.useEffect(() => {
         const scriptId = 'papaparse-script';
         if (document.getElementById(scriptId)) return;
@@ -351,8 +551,13 @@ export default function App() {
         script.src = "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js";
         script.async = true;
         document.body.appendChild(script);
+        return () => {
+            const scriptElement = document.getElementById(scriptId);
+            if (scriptElement) {
+                document.body.removeChild(scriptElement);
+            }
+        }
     }, []);
-
 
     const handleCardClick = (subject) => setModal({ type: 'selectGrade', data: subject });
     const handleGradeSelect = (subject, grade) => setModal({ type: 'classDetail', data: { subject, grade } });
@@ -365,8 +570,8 @@ export default function App() {
                 <div className="absolute w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] bg-purple-500/20 rounded-full filter blur-3xl animate-blob animation-delay-4000 bottom-1/4 right-1/4"></div>
             </div>
             
-            <main className="relative z-10 p-4 sm:p-6 md:p-8 flex-grow">
-                <header className="flex justify-between items-center mb-8">
+            <main className="relative z-10 p-4 sm:p-6 md:p-8 flex-grow w-full max-w-screen-2xl mx-auto">
+                <header className="flex flex-wrap justify-between items-center mb-8 gap-4">
                     <div><h1 className="text-3xl md:text-4xl font-bold text-white">Dashboard</h1><p className="text-gray-400">ภาพรวมรายวิชา - โรงเรียนบ้านวังหิน</p></div>
                     <div className="flex items-center gap-4">
                         <button onClick={() => setModal({type: 'manageRoster'})} className="flex items-center gap-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-bold py-2 px-4 rounded-lg transition-all duration-300 border border-sky-500/40"><Icon name="Users2" size={16}/>ทะเบียนนักเรียน</button>
@@ -374,11 +579,20 @@ export default function App() {
                     </div>
                 </header>
 
-                <OverallAnalytics subjects={subjects} />
-                
-                <h2 className="text-2xl font-bold text-white mb-6 mt-10">รายวิชาทั้งหมด</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {subjects.map((subject) => (<ClassCard key={subject.id} subject={subject} onClick={() => handleCardClick(subject)}/>))}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-8">
+                        <OverallAnalytics subjects={subjects} />
+                        <div>
+                            <h2 className="text-2xl font-bold text-white mb-6">รายวิชาทั้งหมด</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {subjects.map((subject) => (<ClassCard key={subject.id} subject={subject} onClick={() => handleCardClick(subject)}/>))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="lg:col-span-1 flex flex-col gap-6">
+                         <TopStudentsLeaderboard subjects={subjects} />
+                         <RecentActivityFeed />
+                    </div>
                 </div>
             </main>
 
@@ -394,7 +608,7 @@ export default function App() {
     );
 }
 
-// === CHILD COMPONENTS (UNCHANGED & NEW) ===
+// --- Child Components ---
 
 const ClassCard = ({ subject, onClick }) => {
     const theme = colorThemes[subject.colorTheme] || colorThemes.teal;
@@ -469,9 +683,11 @@ const SubjectManagementModal = ({subjects, onClose}) => {
                 const docRef = doc(db, subjectsMetaPath, subjectData.id);
                 const { id, ...dataToUpdate } = subjectData;
                 await setDoc(docRef, dataToUpdate, { merge: true });
+                logActivity('SUBJECT_UPDATE', `แก้ไขข้อมูลวิชา: <strong>${dataToUpdate.name}</strong>`);
             } else {
                 const { id, ...dataToAdd } = subjectData;
                 await addDoc(collection(db, subjectsMetaPath), { ...dataToAdd, createdAt: serverTimestamp() });
+                logActivity('SUBJECT_CREATE', `สร้างวิชาใหม่: <strong>${dataToAdd.name}</strong>`);
             }
             setEditingSubject(null);
         } catch (error) {
@@ -481,9 +697,12 @@ const SubjectManagementModal = ({subjects, onClose}) => {
     
     const handleDelete = async (id) => {
         if (!db) return;
+        const subjectToDelete = subjects.find(s => s.id === id);
+        if (!subjectToDelete) return;
         try {
             const subjectsMetaPath = `artifacts/${appId}/public/data/subjects_meta`;
             await deleteDoc(doc(db, subjectsMetaPath, id));
+            logActivity('SUBJECT_DELETE', `ลบวิชา <strong>${subjectToDelete.name}</strong>`);
         } catch (error) {
             console.error("Error deleting subject:", error);
         }
@@ -683,6 +902,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                 batch.set(docRef, studentScores, { merge: true });
             });
             await batch.commit();
+            logActivity('SCORE_UPDATE', `บันทึกคะแนนในวิชา <strong>${subject.name}</strong> (ป.${grade.replace('p','')})`);
         } catch (error) { console.error("Error saving scores:", error); } 
         finally { setIsSaving(false); }
     };
@@ -694,9 +914,11 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                 const docRef = doc(db, `${subjectBasePath}/assignments`, data.id);
                 const { id, ...dataToUpdate } = data;
                 await setDoc(docRef, dataToUpdate, { merge: true });
+                logActivity('ASSIGNMENT_UPDATE', `แก้ไขงาน <strong>"${data.name}"</strong> ในวิชา <strong>${subject.name}</strong>`);
             } else {
                 const { id, ...dataToAdd } = data;
                 await addDoc(collection(db, `${subjectBasePath}/assignments`), { ...dataToAdd, createdAt: serverTimestamp() });
+                logActivity('ASSIGNMENT_CREATE', `เพิ่มงานใหม่ <strong>"${data.name}"</strong> ในวิชา <strong>${subject.name}</strong>`);
             }
             setModal({ type: null, data: null });
         } catch (error) { console.error(`Error saving assignment:`, error); }
@@ -704,6 +926,8 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
 
     const handleDeleteAssignment = async (id) => {
         if (!id || !db) return;
+        const assignmentToDelete = assignments.find(a => a.id === id);
+        if(!assignmentToDelete) return;
         try {
             await deleteDoc(doc(db, `${subjectBasePath}/assignments`, id));
             
@@ -714,6 +938,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                 batch.update(scoreDoc.ref, { [id]: deleteField() });
             });
             await batch.commit();
+            logActivity('ASSIGNMENT_DELETE', `ลบงาน <strong>"${assignmentToDelete.name}"</strong> จากวิชา <strong>${subject.name}</strong>`);
             setModal({ type: null, data: null });
         } catch (error) { console.error(`Error deleting assignment:`, error); }
     };
@@ -1008,8 +1233,10 @@ const RosterManagementModal = ({ onClose }) => {
                 const docRef = doc(collectionRef, data.id);
                 const { id, ...dataToUpdate } = data;
                 await setDoc(docRef, dataToUpdate, { merge: true });
+                logActivity('STUDENT_UPDATE', `แก้ไขข้อมูลนักเรียน <strong>${data.firstName}</strong> ในชั้น ป.${selectedGrade.replace('p','')}`);
             } else {
                 await addDoc(collectionRef, data);
+                logActivity('STUDENT_ADD', `เพิ่มนักเรียนใหม่ <strong>${data.firstName}</strong> เข้าชั้น ป.${selectedGrade.replace('p','')}`);
             }
             setModal({ type: null, data: null });
         } catch (error) { console.error("Error saving student:", error); }
@@ -1017,11 +1244,11 @@ const RosterManagementModal = ({ onClose }) => {
 
     const handleDeleteStudent = async (id) => {
         if (!id || !db) return;
+        const studentToDelete = students.find(s => s.id === id);
+        if(!studentToDelete) return;
         try {
             await deleteDoc(doc(db, `${rosterBasePath}/students`, id));
-            // Also delete scores for this student across all subjects
-            // This is a complex operation and might be better handled with a cloud function in a real app
-            // For now, we'll just delete from the roster.
+            logActivity('STUDENT_DELETE', `ลบนักเรียน <strong>${studentToDelete.firstName}</strong> ออกจากชั้น ป.${selectedGrade.replace('p','')}`);
             setModal({ type: null, data: null });
         } catch (error) { console.error("Error deleting student:", error); }
     };
@@ -1036,6 +1263,7 @@ const RosterManagementModal = ({ onClose }) => {
                 batch.set(newDocRef, student);
             });
             await batch.commit();
+            logActivity('STUDENT_ADD', `นำเข้ารายชื่อนักเรียน <strong>${newStudents.length}</strong> คน เข้าสู่ชั้น ป.${selectedGrade.replace('p','')}`);
             setModal({ type: null });
         } catch (error) {
             console.error("Error importing students:", error);
@@ -1051,7 +1279,7 @@ const RosterManagementModal = ({ onClose }) => {
                         <button onClick={onClose} className="text-gray-400 hover:text-white"><Icon name="X" size={28} /></button>
                     </header>
                     <div className="p-6 flex-shrink-0 border-b border-white/10">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             {grades.map((gradeId, index) => (
                                 <button
                                     key={gradeId}
@@ -1107,3 +1335,5 @@ const RosterManagementModal = ({ onClose }) => {
         </>
     );
 };
+
+export default App;
