@@ -42,6 +42,10 @@ const Icon = ({ name, ...props }) => {
     Minus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
     BarChart2: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
     Sparkles: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>,
+    ClipboardSignature: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M15 13a3 3 0 1 1-3-3 3 3 0 0 1 3 3z"/></svg>,
+    Copy: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
+    Check: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
+    Lightbulb: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>,
   };
   const IconComponent = icons[name];
   return IconComponent ? <IconComponent {...props} /> : null;
@@ -85,6 +89,38 @@ const logActivity = async (type, message, details = {}) => {
         });
     } catch (error) {
         console.error("Error logging activity:", error);
+    }
+};
+
+// --- Gemini API Helper ---
+const callGeminiAPI = async (prompt) => {
+    // ***************************************************************
+    // ** สำคัญ: กรุณาใส่ API Key ของคุณที่นี่ **
+    // ***************************************************************
+    const apiKey = "AIzaSyAO-D6S5TFjQ06J6VGgkPlAcC-qUryOOkI"; 
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+    
+    const payload = {
+        contents: [{
+            parts: [{ text: prompt }]
+        }]
+    };
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    if (result.candidates && result.candidates.length > 0) {
+        return result.candidates[0].content.parts[0].text;
+    } else {
+        throw new Error("Invalid response structure from API");
     }
 };
 
@@ -1094,6 +1130,7 @@ const AssignmentModal = ({ onClose, onSave, initialData = null }) => {
     const [name, setName] = React.useState(initialData?.name || '');
     const [maxScore, setMaxScore] = React.useState(initialData?.maxScore || 10);
     const [category, setCategory] = React.useState(initialData?.category || 'quiz');
+    const [showAIGenerator, setShowAIGenerator] = React.useState(false);
     const isEditMode = !!initialData;
 
     const handleSubmit = (e) => {
@@ -1102,11 +1139,24 @@ const AssignmentModal = ({ onClose, onSave, initialData = null }) => {
             onSave({ id: initialData?.id, name, maxScore: parseInt(maxScore, 10), category });
         }
     };
+    
+    const handleApplyAIData = (data) => {
+        setName(data.name);
+        setMaxScore(data.maxScore);
+        setShowAIGenerator(false);
+    };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-                <h3 className="text-xl font-bold mb-4">{isEditMode ? 'แก้ไขรายการเก็บคะแนน' : 'เพิ่มรายการเก็บคะแนนใหม่'}</h3>
+        <>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold">{isEditMode ? 'แก้ไขรายการเก็บคะแนน' : 'เพิ่มรายการเก็บคะแนนใหม่'}</h3>
+                    <button onClick={() => setShowAIGenerator(true)} className="flex items-center gap-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-bold py-1 px-3 rounded-lg transition-colors">
+                        <Icon name="Sparkles" size={14} />
+                        ให้ AI ช่วยคิด
+                    </button>
+                </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="assignmentName" className="block text-sm font-medium text-gray-300 mb-1">ชื่องาน</label>
@@ -1133,6 +1183,8 @@ const AssignmentModal = ({ onClose, onSave, initialData = null }) => {
                 </form>
             </div>
         </div>
+        {showAIGenerator && <AIAssignmentGeneratorModal onClose={() => setShowAIGenerator(false)} onApply={handleApplyAIData} />}
+        </>
     );
 };
 
@@ -1383,6 +1435,9 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
     const [isLoading, setIsLoading] = React.useState(true);
     const [aiSummary, setAiSummary] = React.useState('');
     const [isGenerating, setIsGenerating] = React.useState(false);
+    const [parentComment, setParentComment] = React.useState('');
+    const [isGeneratingParentComment, setIsGeneratingParentComment] = React.useState(false);
+    const [isCopied, setIsCopied] = React.useState(false);
 
     React.useEffect(() => {
         const fetchStudentData = async () => {
@@ -1426,6 +1481,7 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
         if (!studentScores) return;
         setIsGenerating(true);
         setAiSummary('');
+        setParentComment('');
 
         let scoreDetails = "";
         for (const subjectName in studentScores) {
@@ -1445,36 +1501,57 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
         `;
 
         try {
-            // NOTE: Replace with your actual Gemini API endpoint and key handling
-            const apiKey = "AIzaSyAO-D6S5TFjQ06J6VGgkPlAcC-qUryOOkI"; // This should be handled securely
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
-            
-            const payload = {
-                contents: [{
-                    parts: [{ text: prompt }]
-                }]
-            };
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.statusText}`);
-            }
-
-            const result = await response.json();
-            const summaryText = result.candidates[0].content.parts[0].text;
+            const summaryText = await callGeminiAPI(prompt);
             setAiSummary(summaryText);
-
         } catch (error) {
-            console.error("Error calling Gemini API:", error);
+            console.error("Error calling Gemini API for summary:", error);
             setAiSummary("เกิดข้อผิดพลาดในการเรียก AI เพื่อสรุปผล โปรดลองอีกครั้ง");
         } finally {
             setIsGenerating(false);
         }
+    };
+
+    const handleGenerateParentComment = async () => {
+        if (!aiSummary) return;
+        setIsGeneratingParentComment(true);
+        setParentComment('');
+
+        const prompt = `
+            ในฐานะครูที่ปรึกษาที่เชี่ยวชาญด้านการสื่อสารเชิงบวก จงนำบทวิเคราะห์ผลการเรียนต่อไปนี้:
+            "${aiSummary}"
+            
+            แล้วเรียบเรียงใหม่เป็น "ข้อความคอมเมนต์สำหรับผู้ปกครอง" โดยใช้หลักการต่อไปนี้:
+            1. ใช้ภาษาที่เป็นทางการ สุภาพ และเข้าใจง่ายสำหรับผู้ปกครอง
+            2. ขึ้นต้นด้วยจุดแข็งหรือด้านที่น่าชื่นชมของนักเรียนเสมอ
+            3. กล่าวถึงจุดที่ควรพัฒนาในเชิง "ข้อเสนอแนะเพื่อส่งเสริม" ไม่ใช่ "ข้อตำหนิ"
+            4. จบด้วยประโยคที่แสดงถึงความร่วมมือระหว่างโรงเรียนและผู้ปกครอง
+            5. มีความยาวไม่เกิน 3-4 ประโยค
+        `;
+        
+        try {
+            const commentText = await callGeminiAPI(prompt);
+            setParentComment(commentText);
+        } catch (error) {
+            console.error("Error calling Gemini API for parent comment:", error);
+            setParentComment("เกิดข้อผิดพลาดในการสร้างคอมเมนต์สำหรับผู้ปกครอง โปรดลองอีกครั้ง");
+        } finally {
+            setIsGeneratingParentComment(false);
+        }
+    };
+
+    const handleCopy = (text) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+        document.body.removeChild(textArea);
     };
 
     return (
@@ -1499,8 +1576,28 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
                                     {isGenerating ? 'กำลังวิเคราะห์...' : 'ให้ AI ช่วยวิเคราะห์'}
                                 </button>
                                 {aiSummary && (
-                                    <div className="mt-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
-                                        <p className="text-white whitespace-pre-wrap">{aiSummary}</p>
+                                    <div className="mt-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg space-y-4">
+                                        <div>
+                                            <h4 className="font-semibold text-gray-300 text-sm mb-2">สรุปสำหรับคุณครู:</h4>
+                                            <p className="text-white whitespace-pre-wrap">{aiSummary}</p>
+                                        </div>
+                                        
+                                        <button onClick={handleGenerateParentComment} disabled={isGeneratingParentComment || isGenerating} className="w-full flex items-center justify-center gap-2 bg-teal-500/80 hover:bg-teal-500 text-white font-bold py-2 px-3 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-wait">
+                                            {isGeneratingParentComment ? <Icon name="Loader2" className="animate-spin" size={20}/> : <Icon name="ClipboardSignature" size={20}/>}
+                                            {isGeneratingParentComment ? 'กำลังเรียบเรียง...' : 'สร้างคอมเมนต์สำหรับผู้ปกครอง'}
+                                        </button>
+
+                                        {parentComment && (
+                                            <div className="pt-4 border-t border-gray-700">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <h4 className="font-semibold text-gray-300 text-sm">ข้อความสำหรับผู้ปกครอง:</h4>
+                                                    <button onClick={() => handleCopy(parentComment)} className="text-gray-400 hover:text-white">
+                                                        {isCopied ? <Icon name="Check" size={18} className="text-green-400"/> : <Icon name="Copy" size={18}/>}
+                                                    </button>
+                                                </div>
+                                                <p className="text-white whitespace-pre-wrap">{parentComment}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1526,6 +1623,92 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
                         </>
                     )}
                 </div>
+            </div>
+        </div>
+    );
+};
+
+// +++ NEW COMPONENT: AIAssignmentGeneratorModal +++
+const AIAssignmentGeneratorModal = ({ onClose, onApply }) => {
+    const [topic, setTopic] = React.useState('');
+    const [type, setType] = React.useState('multiple_choice');
+    const [count, setCount] = React.useState(5);
+    const [result, setResult] = React.useState('');
+    const [isGenerating, setIsGenerating] = React.useState(false);
+    
+    const handleGenerate = async () => {
+        if (!topic) return;
+        setIsGenerating(true);
+        setResult('');
+
+        const prompt = `
+            ในฐานะผู้ช่วยสร้างแบบทดสอบสำหรับครูประถม จงสร้างแบบทดสอบจากหัวข้อต่อไปนี้:
+            - หัวข้อ: "${topic}"
+            - ประเภท: ${type === 'multiple_choice' ? 'ปรนัย 3 ตัวเลือก' : 'ถูก-ผิด'}
+            - จำนวน: ${count} ข้อ
+            
+            จงสร้างชุดคำถามพร้อมตัวเลือกและเฉลยที่ชัดเจน (เช่น *ก. คำตอบ) สำหรับนักเรียนชั้นประถม
+            ผลลัพธ์ให้ตอบเป็นข้อความธรรมดาเท่านั้น
+        `;
+
+        try {
+            const generatedText = await callGeminiAPI(prompt);
+            setResult(generatedText);
+        } catch (error) {
+            console.error("Error calling Gemini API for assignment generation:", error);
+            setResult("เกิดข้อผิดพลาดในการสร้างแบบทดสอบ โปรดลองอีกครั้ง");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleApply = () => {
+        onApply({ name: topic, maxScore: count });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-gray-800 border border-purple-500/50 rounded-2xl w-full max-w-xl flex flex-col shadow-2xl shadow-black/50" onClick={(e) => e.stopPropagation()}>
+                <header className="flex items-center justify-between p-4 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                        <Icon name="Lightbulb" className="text-purple-300" />
+                        <h3 className="text-xl font-bold text-white">ผู้ช่วยสร้างแบบทดสอบ</h3>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white"><Icon name="X" size={24} /></button>
+                </header>
+                <div className="p-6 space-y-4 overflow-y-auto">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">1. บอกหัวข้อที่ต้องการ</label>
+                        <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="เช่น ส่วนประกอบของพืช, การบวกลบเลข..." className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">2. เลือกประเภท</label>
+                            <select value={type} onChange={(e) => setType(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white">
+                                <option value="multiple_choice">ปรนัย (ก, ข, ค)</option>
+                                <option value="true_false">ถูก-ผิด</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">3. จำนวนข้อ</label>
+                            <input type="number" value={count} onChange={(e) => setCount(parseInt(e.target.value, 10))} min="1" max="20" className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white" />
+                        </div>
+                    </div>
+                     <button onClick={handleGenerate} disabled={isGenerating || !topic} className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:opacity-90 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-wait">
+                        {isGenerating ? <Icon name="Loader2" className="animate-spin" size={20}/> : <Icon name="Sparkles" size={20}/>}
+                        {isGenerating ? 'กำลังสร้าง...' : 'สร้างแบบทดสอบ'}
+                    </button>
+                    {result && (
+                        <div className="p-4 bg-gray-900/50 border border-gray-700 rounded-lg max-h-60 overflow-y-auto">
+                            <p className="text-white whitespace-pre-wrap">{result}</p>
+                        </div>
+                    )}
+                </div>
+                <footer className="p-4 border-t border-white/10 flex justify-end">
+                     <button onClick={handleApply} disabled={!result || isGenerating} className="py-2 px-6 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg transition-colors disabled:bg-gray-600">
+                        นำไปใช้
+                    </button>
+                </footer>
             </div>
         </div>
     );
