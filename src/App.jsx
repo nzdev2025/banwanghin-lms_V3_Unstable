@@ -125,7 +125,7 @@ const analyticsCardStyles = [
     { gradient: 'from-fuchsia-500/70 to-purple-500/70', border: 'border-fuchsia-400' },
 ];
 
-// --- NEW COMPONENT: TopStudentsLeaderboard ---
+// --- REVISED COMPONENT: TopStudentsLeaderboard ---
 const TopStudentsLeaderboard = ({ subjects }) => {
     const [topStudents, setTopStudents] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
@@ -138,32 +138,58 @@ const TopStudentsLeaderboard = ({ subjects }) => {
             }
             setIsLoading(true);
 
-            const allTopStudents = [];
+            // 1. Fetch all data in parallel
+            const promises = [];
+            grades.forEach(grade => {
+                promises.push(getDocs(collection(db, `artifacts/${appId}/public/data/rosters/${grade}/students`)));
+                subjects.forEach(subject => {
+                    promises.push(getDocs(collection(db, `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}/assignments`)));
+                    promises.push(getDocs(collection(db, `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}/scores`)));
+                });
+            });
 
+            const results = await Promise.all(promises);
+
+            // 2. Process data in memory
+            const data = {};
+            let promiseIndex = 0;
+
+            grades.forEach(grade => {
+                data[grade] = {
+                    students: results[promiseIndex++].docs.map(d => ({ id: d.id, ...d.data() })),
+                    subjects: {}
+                };
+                subjects.forEach(subject => {
+                    data[grade].subjects[subject.id] = {
+                        assignments: results[promiseIndex++].docs.map(d => ({ id: d.id, ...d.data() })),
+                        scores: results[promiseIndex++].docs.reduce((acc, doc) => {
+                            acc[doc.id] = doc.data();
+                            return acc;
+                        }, {}),
+                    };
+                });
+            });
+
+            // 3. Calculate top students
+            const allTopStudents = [];
             for (const grade of grades) {
-                const studentsSnap = await getDocs(collection(db, `artifacts/${appId}/public/data/rosters/${grade}/students`));
-                const studentsInGrade = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                if (studentsInGrade.length === 0) continue;
+                const { students, subjects: subjectData } = data[grade];
+                if (students.length === 0) continue;
 
                 let topStudentForGrade = null;
                 let maxScorePercentage = -1;
 
-                for (const student of studentsInGrade) {
+                for (const student of students) {
                     let totalEarned = 0;
                     let totalMax = 0;
 
-                    for (const subject of subjects) {
-                        const assignmentsSnap = await getDocs(collection(db, `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}/assignments`));
-                        const scoresSnap = await getDocs(collection(db, `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}/scores`));
+                    for (const subjectId in subjectData) {
+                        const { assignments, scores } = subjectData[subjectId];
+                        const studentScores = scores[student.id] || {};
                         
-                        const studentScoresDoc = scoresSnap.docs.find(doc => doc.id === student.id);
-                        const studentScores = studentScoresDoc ? studentScoresDoc.data() : {};
-
-                        assignmentsSnap.forEach(assignDoc => {
-                            const assignment = assignDoc.data();
+                        assignments.forEach(assignment => {
                             totalMax += assignment.maxScore || 0;
-                            totalEarned += studentScores[assignDoc.id] || 0;
+                            totalEarned += studentScores[assignment.id] || 0;
                         });
                     }
                     
@@ -182,6 +208,7 @@ const TopStudentsLeaderboard = ({ subjects }) => {
                     allTopStudents.push(topStudentForGrade);
                 }
             }
+
             setTopStudents(allTopStudents);
             setIsLoading(false);
         };
@@ -200,7 +227,7 @@ const TopStudentsLeaderboard = ({ subjects }) => {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {grades.map((grade, index) => {
+                    {grades.map((grade) => {
                         const student = topStudents.find(s => s.grade === grade);
                         return (
                             <div key={grade} className="bg-gradient-to-r from-amber-500/20 to-yellow-500/10 p-3 rounded-lg border border-amber-400/30 flex items-center gap-4">
@@ -208,7 +235,7 @@ const TopStudentsLeaderboard = ({ subjects }) => {
                                     <Icon name="Crown" size={24} className="text-amber-300" />
                                 </div>
                                 {student ? (
-                                    <div className="flex-grow">
+                                    <div className="flex-grow min-w-0">
                                         <p className="font-bold text-white truncate">{student.firstName} {student.lastName}</p>
                                         <p className="text-xs text-gray-400">ป.{grade.replace('p','')} - คะแนนรวม {student.score.toFixed(2)}%</p>
                                     </div>
@@ -1043,15 +1070,20 @@ const StudentModal = ({ onClose, onSave, initialData = null }) => {
     const isEditMode = !!initialData;
     const handleSubmit = (e) => { e.preventDefault(); if (studentNumber && firstName.trim() && lastName.trim()) { onSave({ id: initialData?.id, studentNumber: parseInt(studentNumber, 10), firstName, lastName }); }};
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"><div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-xl font-bold mb-4">{isEditMode ? 'แก้ไขข้อมูลนักเรียน' : 'เพิ่มนักเรียนใหม่'}</h3>
-            <form onSubmit={handleSubmit}>
-                <div className="mb-4"><label htmlFor="studentNumber" className="block text-sm font-medium text-gray-300 mb-1">เลขที่</label><input type="number" id="studentNumber" value={studentNumber} onChange={(e) => setStudentNumber(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required min="1" /></div>
-                <div className="mb-4"><label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-1">ชื่อจริง</label><input type="text" id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required /></div>
-                <div className="mb-6"><label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-1">นามสกุล</label><input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required /></div>
-                <div className="flex justify-end gap-4"><button type="button" onClick={onClose} className="py-2 px-4 text-gray-300 hover:text-white">ยกเลิก</button><button type="submit" className="py-2 px-4 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg transition-colors">{isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มนักเรียน'}</button></div>
-            </form>
-        </div></div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-xl font-bold mb-4">{isEditMode ? 'แก้ไขข้อมูลนักเรียน' : 'เพิ่มนักเรียนใหม่'}</h3>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-4"><label htmlFor="studentNumber" className="block text-sm font-medium text-gray-300 mb-1">เลขที่</label><input type="number" id="studentNumber" value={studentNumber} onChange={(e) => setStudentNumber(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required min="1" /></div>
+                    <div className="mb-4"><label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-1">ชื่อจริง</label><input type="text" id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required /></div>
+                    <div className="mb-6"><label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-1">นามสกุล</label><input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" required /></div>
+                    <div className="flex justify-end gap-4 mt-8">
+                        <button type="button" onClick={onClose} className="py-2 px-4 text-gray-300 hover:text-white">ยกเลิก</button>
+                        <button type="submit" className="py-2 px-4 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg transition-colors">{isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มนักเรียน'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 };
 
@@ -1235,11 +1267,16 @@ const RosterManagementModal = ({ onClose }) => {
                 await setDoc(docRef, dataToUpdate, { merge: true });
                 logActivity('STUDENT_UPDATE', `แก้ไขข้อมูลนักเรียน <strong>${data.firstName}</strong> ในชั้น ป.${selectedGrade.replace('p','')}`);
             } else {
-                await addDoc(collectionRef, data);
+                // ลบ id ออกก่อนเพิ่มใหม่
+                const { id, ...dataToAdd } = data;
+                await addDoc(collectionRef, dataToAdd);
                 logActivity('STUDENT_ADD', `เพิ่มนักเรียนใหม่ <strong>${data.firstName}</strong> เข้าชั้น ป.${selectedGrade.replace('p','')}`);
             }
             setModal({ type: null, data: null });
-        } catch (error) { console.error("Error saving student:", error); }
+        } catch (error) {
+            console.error("Error saving student:", error);
+            alert('เกิดข้อผิดพลาด: ' + error.message);
+        }
     };
 
     const handleDeleteStudent = async (id) => {
@@ -1272,8 +1309,8 @@ const RosterManagementModal = ({ onClose }) => {
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col shadow-2xl shadow-black/50">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+                <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col shadow-2xl shadow-black/50" onClick={(e) => e.stopPropagation()}>
                     <header className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
                         <h2 className="text-2xl font-bold text-white">ทะเบียนนักเรียน</h2>
                         <button onClick={onClose} className="text-gray-400 hover:text-white"><Icon name="X" size={28} /></button>
@@ -1312,8 +1349,8 @@ const RosterManagementModal = ({ onClose }) => {
                                             <td className="p-3">{student.lastName}</td>
                                             <td className="p-3 text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <button onClick={() => setModal({ type: 'editStudent', data: student })} className="p-1.5 text-sky-400 hover:bg-sky-500 hover:text-white rounded"><Icon name="Pencil" size={16}/></button>
-                                                    <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'student', id: student.id, name: `${student.firstName} ${student.lastName}` }})} className="p-1.5 text-red-400 hover:bg-red-500 hover:text-white rounded"><Icon name="Trash2" size={16}/></button>
+                                                    <button onClick={() => setModal({ type: 'editStudent', data: student })} className="p-1.5 text-sky-400 hover:bg-sky-500/20 rounded"><Icon name="Pencil" size={16}/></button>
+                                                    <button onClick={() => setModal({ type: 'deleteConfirmation', data: { type: 'student', id: student.id, name: `${student.firstName} ${student.lastName}` }})} className="p-1.5 text-red-400 hover:bg-red-500/20 rounded"><Icon name="Trash2" size={16}/></button>
                                                 </div>
                                             </td>
                                         </tr>
