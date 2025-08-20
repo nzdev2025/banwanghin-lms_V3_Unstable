@@ -41,6 +41,7 @@ const Icon = ({ name, ...props }) => {
     TrendingDown: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>,
     Minus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
     BarChart2: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    Sparkles: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>,
   };
   const IconComponent = icons[name];
   return IconComponent ? <IconComponent {...props} /> : null;
@@ -589,6 +590,7 @@ function App() {
     const handleCardClick = (subject) => setModal({ type: 'selectGrade', data: subject });
     const handleGradeSelect = (subject, grade) => setModal({ type: 'classDetail', data: { subject, grade } });
     const handleCloseModal = () => setModal({type: null});
+    const handleStudentClick = (student, grade) => setModal({ type: 'studentProfile', data: { student, grade } });
 
     return (
         <div className="min-h-screen bg-gray-900 text-white font-sans relative overflow-hidden flex flex-col">
@@ -628,9 +630,10 @@ function App() {
             </footer>
             
             {modal.type === 'selectGrade' && <GradeSelectionModal subject={modal.data} onSelect={handleGradeSelect} onClose={handleCloseModal} />}
-            {modal.type === 'classDetail' && (<ClassDetailView subject={modal.data.subject} grade={modal.data.grade} onClose={handleCloseModal}/>)}
+            {modal.type === 'classDetail' && (<ClassDetailView subject={modal.data.subject} grade={modal.data.grade} onStudentClick={handleStudentClick} onClose={handleCloseModal}/>)}
             {modal.type === 'manageSubjects' && <SubjectManagementModal subjects={subjects} onClose={handleCloseModal}/>}
             {modal.type === 'manageRoster' && <RosterManagementModal onClose={handleCloseModal} />}
+            {modal.type === 'studentProfile' && <StudentProfileModal student={modal.data.student} grade={modal.data.grade} subjects={subjects} onClose={handleCloseModal} />}
         </div>
     );
 }
@@ -880,7 +883,7 @@ const AnalyticsDashboard = ({ students, assignments, scores }) => {
 };
 
 
-const ClassDetailView = ({ subject, grade, onClose }) => {
+const ClassDetailView = ({ subject, grade, onClose, onStudentClick }) => {
     const [students, setStudents] = React.useState([]);
     const [assignments, setAssignments] = React.useState([]);
     const [scores, setScores] = React.useState({});
@@ -1031,7 +1034,7 @@ const ClassDetailView = ({ subject, grade, onClose }) => {
                                    return (
                                     <tr key={student.id} className="hover:bg-white/5">
                                         <td className="p-2 text-center border-b border-r border-gray-700">{student.studentNumber}</td>
-                                        <td className="p-2 font-medium border-b border-r border-gray-700">{`${student.firstName} ${student.lastName}`}</td>
+                                        <td className="p-2 font-medium border-b border-r border-gray-700 cursor-pointer hover:text-teal-300" onClick={() => onStudentClick(student, grade)}>{`${student.firstName} ${student.lastName}`}</td>
                                         {assignments.map(assign => (
                                             <td key={assign.id} className="p-0 border-b border-r border-gray-700">
                                                 <input type="number" max={assign.maxScore} min="0" value={scores[student.id]?.[assign.id] ?? ''} onChange={(e) => handleScoreChange(student.id, assign.id, e.target.value)} className="w-full h-full bg-transparent text-center text-white p-3 outline-none focus:bg-sky-500/20" placeholder="-"/>
@@ -1267,7 +1270,8 @@ const RosterManagementModal = ({ onClose }) => {
                 await setDoc(docRef, dataToUpdate, { merge: true });
                 logActivity('STUDENT_UPDATE', `แก้ไขข้อมูลนักเรียน <strong>${data.firstName}</strong> ในชั้น ป.${selectedGrade.replace('p','')}`);
             } else {
-                // ลบ id ออกก่อนเพิ่มใหม่
+                // This is the fix for the final bug we found.
+                // The 'id' field with 'undefined' value is removed before adding the document.
                 const { id, ...dataToAdd } = data;
                 await addDoc(collectionRef, dataToAdd);
                 logActivity('STUDENT_ADD', `เพิ่มนักเรียนใหม่ <strong>${data.firstName}</strong> เข้าชั้น ป.${selectedGrade.replace('p','')}`);
@@ -1372,5 +1376,160 @@ const RosterManagementModal = ({ onClose }) => {
         </>
     );
 };
+
+// +++ NEW COMPONENT: StudentProfileModal +++
+const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
+    const [studentScores, setStudentScores] = React.useState(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [aiSummary, setAiSummary] = React.useState('');
+    const [isGenerating, setIsGenerating] = React.useState(false);
+
+    React.useEffect(() => {
+        const fetchStudentData = async () => {
+            if (!db) return;
+            setIsLoading(true);
+            const scoresData = {};
+            
+            for (const subject of subjects) {
+                const scoresPath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}/scores`;
+                const assignmentsPath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}/assignments`;
+                
+                const scoresDocRef = doc(db, scoresPath, student.id);
+                const assignmentsCollectionRef = collection(db, assignmentsPath);
+
+                const [scoresSnap, assignmentsSnap] = await Promise.all([
+                    getDocs(collection(db, scoresPath)),
+                    getDocs(collection(db, assignmentsPath))
+                ]);
+
+                const studentScoresDoc = scoresSnap.docs.find(d => d.id === student.id);
+
+                if (studentScoresDoc) {
+                    const scores = studentScoresDoc.data();
+                    const assignments = assignmentsSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                    
+                    scoresData[subject.name] = assignments.map(assign => ({
+                        name: assign.name,
+                        score: scores[assign.id] ?? 'N/A',
+                        maxScore: assign.maxScore
+                    }));
+                }
+            }
+            setStudentScores(scoresData);
+            setIsLoading(false);
+        };
+
+        fetchStudentData();
+    }, [student, grade, subjects]);
+
+    const handleGenerateSummary = async () => {
+        if (!studentScores) return;
+        setIsGenerating(true);
+        setAiSummary('');
+
+        let scoreDetails = "";
+        for (const subjectName in studentScores) {
+            const scoresText = studentScores[subjectName]
+                .map(s => `${s.name}: ${s.score}/${s.maxScore}`)
+                .join(', ');
+            scoreDetails += `- วิชา${subjectName}: ${scoresText}\n`;
+        }
+
+        const prompt = `
+            ในฐานะผู้ช่วยครูมืออาชีพ จงวิเคราะห์ข้อมูลคะแนนของนักเรียนชื่อ '${student.firstName} ${student.lastName}' ชั้น ป.${grade.replace('p', '')}'
+            ข้อมูลคะแนนมีดังนี้:
+            ${scoreDetails}
+            
+            จงสรุปภาพรวมการเรียน, ระบุจุดแข็ง, และแนะนำจุดที่ควรพัฒนา 1-2 ข้อ
+            เขียนสรุปเป็นภาษาไทยที่กระชับ, เข้าใจง่าย, และให้กำลังใจสำหรับคุณครูเพื่อนำไปใช้พัฒนาการสอน
+        `;
+
+        try {
+            // NOTE: Replace with your actual Gemini API endpoint and key handling
+            const apiKey = "AIzaSyAO-D6S5TFjQ06J6VGgkPlAcC-qUryOOkI"; // This should be handled securely
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }]
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            const summaryText = result.candidates[0].content.parts[0].text;
+            setAiSummary(summaryText);
+
+        } catch (error) {
+            console.error("Error calling Gemini API:", error);
+            setAiSummary("เกิดข้อผิดพลาดในการเรียก AI เพื่อสรุปผล โปรดลองอีกครั้ง");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl shadow-black/50" onClick={(e) => e.stopPropagation()}>
+                <header className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
+                    <div>
+                        <h2 className="text-2xl font-bold text-white">{student.firstName} {student.lastName}</h2>
+                        <p className="text-gray-400">ภาพรวมผลการเรียน - ป.{grade.replace('p','')}</p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white"><Icon name="X" size={28} /></button>
+                </header>
+                <div className="p-6 flex-grow overflow-auto space-y-6">
+                    {isLoading ? (
+                        <div className="flex items-center justify-center h-full"><Icon name="Loader2" className="animate-spin text-sky-400" size={40} /></div>
+                    ) : (
+                        <>
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-3">บทวิเคราะห์โดย AI</h3>
+                                <button onClick={handleGenerateSummary} disabled={isGenerating} className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:opacity-90 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-wait">
+                                    {isGenerating ? <Icon name="Loader2" className="animate-spin" size={20}/> : <Icon name="Sparkles" size={20}/>}
+                                    {isGenerating ? 'กำลังวิเคราะห์...' : 'ให้ AI ช่วยวิเคราะห์'}
+                                </button>
+                                {aiSummary && (
+                                    <div className="mt-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
+                                        <p className="text-white whitespace-pre-wrap">{aiSummary}</p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-3">คะแนนรายวิชา</h3>
+                                <div className="space-y-4">
+                                    {Object.keys(studentScores).length > 0 ? Object.entries(studentScores).map(([subjectName, scores]) => (
+                                        <div key={subjectName} className="bg-gray-700/30 p-4 rounded-lg">
+                                            <h4 className="font-bold text-teal-300 mb-2">{subjectName}</h4>
+                                            <ul className="text-sm text-gray-300 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
+                                                {scores.map(s => (
+                                                    <li key={s.name} className="flex justify-between">
+                                                        <span>{s.name}:</span>
+                                                        <span className="font-mono">{s.score}/{s.maxScore}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )) : <p className="text-gray-500">ไม่มีข้อมูลคะแนน</p>}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 export default App;
