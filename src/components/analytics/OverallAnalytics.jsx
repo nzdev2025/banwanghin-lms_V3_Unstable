@@ -1,0 +1,114 @@
+import React from 'react';
+import { getDocs, collection } from 'firebase/firestore';
+import { db, appId } from '../../firebase/firebase';
+import { grades } from '../../constants/data';
+import { colorThemes } from '../../constants/theme';
+import KeyMetricCard from './KeyMetricCard';
+import SubjectPerformanceChart from './SubjectPerformanceChart';
+import AssignmentTypeDistributionChart from './AssignmentTypeDistributionChart';
+
+const OverallAnalytics = ({ subjects }) => {
+    const [stats, setStats] = React.useState({ totalStudents: 0, overallAverage: 0, isLoading: true });
+    const [barChartData, setBarChartData] = React.useState([]);
+    const [radarChartData, setRadarChartData] = React.useState([]);
+
+    React.useEffect(() => {
+        const fetchAllStats = async () => {
+            if (!db) {
+                setStats(s => ({ ...s, isLoading: false }));
+                return;
+            }
+            setStats(s => ({ ...s, isLoading: true }));
+
+            let totalStudents = 0;
+            let grandTotalScore = 0;
+            let grandTotalMaxScore = 0;
+            const subjectAverages = [];
+            const categoryCounts = { quiz: 0, midterm: 0, final: 0 };
+
+            const studentCountPromises = grades.map(grade => getDocs(collection(db, `artifacts/${appId}/public/data/rosters/${grade}/students`)));
+            const studentCountSnapshots = await Promise.all(studentCountPromises);
+            studentCountSnapshots.forEach(snap => totalStudents += snap.size);
+
+            for (const subject of subjects) {
+                let subjectTotalScore = 0;
+                let subjectTotalMaxScore = 0;
+
+                for (const grade of grades) {
+                    const basePath = `artifacts/${appId}/public/data/subjects/${subject.id}/grades/${grade}`;
+                    try {
+                        const [assignmentsSnap, scoresSnap] = await Promise.all([
+                            getDocs(collection(db, `${basePath}/assignments`)),
+                            getDocs(collection(db, `${basePath}/scores`))
+                        ]);
+
+                        const assignmentsMap = new Map();
+                        assignmentsSnap.forEach(doc => {
+                            const data = doc.data();
+                            assignmentsMap.set(doc.id, data);
+                            const category = data.category || 'quiz';
+                            if (Object.prototype.hasOwnProperty.call(categoryCounts, category)) {
+                                categoryCounts[category]++;
+                            }
+                        });
+
+                        scoresSnap.forEach(scoreDoc => {
+                            const scores = scoreDoc.data();
+                            for (const assignmentId in scores) {
+                                const assignment = assignmentsMap.get(assignmentId);
+                                if (assignment && typeof scores[assignmentId] === 'number') {
+                                    subjectTotalScore += scores[assignmentId];
+                                    subjectTotalMaxScore += assignment.maxScore;
+                                }
+                            }
+                        });
+                    } catch (e) {
+                         // This can happen if a grade collection doesn't exist yet, which is fine.
+                    }
+                }
+
+                grandTotalScore += subjectTotalScore;
+                grandTotalMaxScore += subjectTotalMaxScore;
+
+                const subjectAverage = subjectTotalMaxScore > 0 ? (subjectTotalScore / subjectTotalMaxScore) * 100 : 0;
+                subjectAverages.push({
+                    id: subject.id,
+                    name: subject.name,
+                    average: subjectAverage,
+                    colorTheme: subject.colorTheme,
+                });
+            }
+
+            const overallAverage = grandTotalMaxScore > 0 ? (grandTotalScore / grandTotalMaxScore) * 100 : 0;
+
+            setBarChartData(subjectAverages.sort((a, b) => b.average - a.average));
+
+            const radarData = [
+                { type: 'เก็บคะแนน', count: categoryCounts.quiz },
+                { type: 'กลางภาค', count: categoryCounts.midterm },
+                { type: 'ปลายภาค', count: categoryCounts.final },
+            ];
+            setRadarChartData(radarData);
+
+            setStats({ totalStudents, overallAverage, isLoading: false });
+        };
+
+        fetchAllStats();
+    }, [subjects]);
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <KeyMetricCard icon="BookOpen" title="จำนวนวิชาทั้งหมด" value={subjects.length} isLoading={stats.isLoading} theme={colorThemes.teal} />
+                 <KeyMetricCard icon="Users" title="จำนวนนักเรียนในระบบ" value={stats.totalStudents} isLoading={stats.isLoading} theme={colorThemes.sky} />
+                 <KeyMetricCard icon="Target" title="ค่าเฉลี่ยคะแนนรวม" value={`${stats.overallAverage.toFixed(2)}%`} isLoading={stats.isLoading} theme={colorThemes.purple} />
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <SubjectPerformanceChart data={barChartData} isLoading={stats.isLoading} />
+                <AssignmentTypeDistributionChart data={radarChartData} isLoading={stats.isLoading} />
+            </div>
+        </div>
+    );
+};
+
+export default OverallAnalytics;
