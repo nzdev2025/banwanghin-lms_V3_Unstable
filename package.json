@@ -17,7 +17,8 @@
     "prop-types": "^15.8.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "recharts": "^3.1.2"
+    "recharts": "^3.1.2",
+    "remarkable": "^2.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

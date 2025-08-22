@@ -26,6 +26,10 @@ import RosterManagementModal from './components/modals/RosterManagementModal';
 import StudentProfileModal from './components/modals/StudentProfileModal';
 import SavingsManagementModal from './components/modals/SavingsManagementModal';
 
+//... ที่ส่วน import ของ src/App.jsx
+import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
+import AIWorksheetGeneratorModal from './components/modals/AIWorksheetGeneratorModal';
+
 // --- Core App Layout ---
 function App() {
     const [subjects, setSubjects] = React.useState([]);
@@ -73,6 +77,7 @@ function App() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
                                         <SavingsCard onClick={() => setModal({ type: 'manageSavings' })} />
+                                            <AIWorksheetFactoryCard onClick={() => setModal({ type: 'aiWorksheet' })} /> 
                                     </div>
                                 </div>
                             </div>
@@ -102,6 +107,7 @@ function App() {
             {modal.type === 'manageRoster' && <RosterManagementModal onClose={handleCloseModal} />}
             {modal.type === 'studentProfile' && <StudentProfileModal student={modal.data.student} grade={modal.data.grade} subjects={subjects} onClose={handleCloseModal} />}
             {modal.type === 'manageSavings' && <SavingsManagementModal onClose={handleCloseModal} />}
+            {modal.type === 'aiWorksheet' && <AIWorksheetGeneratorModal onClose={handleCloseModal} />}
         </>
     );
 }
