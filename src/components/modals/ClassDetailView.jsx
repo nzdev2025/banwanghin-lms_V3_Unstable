@@ -157,8 +157,8 @@ const ClassDetailView = ({ subject, grade, onClose, onStudentClick }) => {
                                    const totalScore = assignments.reduce((sum, assign) => (sum + (scores[student.id]?.[assign.id] ?? 0)), 0);
                                    return (
                                     <tr key={student.id} className="hover:bg-white/5">
-                                        <td className="p-2 text-center border-b border-r border-gray-700">{student.studentNumber}</td>
-                                        <td className="p-2 font-medium border-b border-r border-gray-700 cursor-pointer hover:text-teal-300" onClick={() => onStudentClick(student, grade)}>{`${student.firstName} ${student.lastName}`}</td>
+                                        <td className="p-2 text-center border-b border-r border-gray-700 text-gray-200">{student.studentNumber}</td>
+                                        <td className="p-2 font-medium text-gray-200 border-b border-r border-gray-700 cursor-pointer hover:text-teal-300" onClick={() => onStudentClick(student, grade)}>{`${student.firstName} ${student.lastName}`}</td>
                                         {assignments.map(assign => (
                                             <td key={assign.id} className="p-0 border-b border-r border-gray-700">
                                                 <input type="number" max={assign.maxScore} min="0" value={scores[student.id]?.[assign.id] ?? ''} onChange={(e) => handleScoreChange(student.id, assign.id, e.target.value)} className="w-full h-full bg-transparent text-center text-white p-3 outline-none focus:bg-sky-500/20" placeholder="-"/>

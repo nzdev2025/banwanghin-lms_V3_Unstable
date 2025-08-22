@@ -116,9 +116,9 @@ const RosterManagementModal = ({ onClose }) => {
                                 <tbody>
                                     {students.map(student => (
                                         <tr key={student.id} className="border-b border-gray-700/50 hover:bg-white/5">
-                                            <td className="p-3">{student.studentNumber}</td>
-                                            <td className="p-3">{student.firstName}</td>
-                                            <td className="p-3">{student.lastName}</td>
+                                            <td className="p-3 text-gray-200">{student.studentNumber}</td>
+                                            <td className="p-3 text-gray-200">{student.firstName}</td>
+                                            <td className="p-3 text-gray-200">{student.lastName}</td>
                                             <td className="p-3 text-right">
                                                 <div className="flex justify-end gap-2">
                                                     <button onClick={() => setModal({ type: 'editStudent', data: student })} className="p-1.5 text-sky-400 hover:bg-sky-500/20 rounded"><Icon name="Pencil" size={16}/></button>
