@@ -2,12 +2,12 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCGy9AqyJTjJSVJidVPQ_3H4xqDl81K7uU",
-    authDomain: "banwanghinscore.firebaseapp.com",
-    projectId: "banwanghinscore",
-    storageBucket: "banwanghinscore.appspot.com",
-    messagingSenderId: "730874164075",
-    appId: "1:730874164075:web:d1e73f5f642fcede7f122e"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 let app;

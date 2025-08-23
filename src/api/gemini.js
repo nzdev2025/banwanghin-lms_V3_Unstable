@@ -2,7 +2,7 @@ export const callGeminiAPI = async (prompt) => {
     // ***************************************************************
     // ** สำคัญ: กรุณาใส่ API Key ของคุณที่นี่ **
     // ***************************************************************
-    const apiKey = "";
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
     const payload = {

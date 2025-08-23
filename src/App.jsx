@@ -79,9 +79,9 @@ function App() {
                                     <h2 className="text-2xl font-bold text-white mb-6">เครื่องมือหลัก</h2>
                                     {/* +++ เพิ่ม CARD ใหม่ตรงนี้ +++ */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                                        <AttendanceCard onClick={() => setModal({ type: 'manageAttendance' })} />
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
-                                        <SavingsCard onClick={() => setModal({ type: 'manageSavings' })} />
-                                        <AttendanceCard onClick={() => setModal({ type: 'manageAttendance' })} /> 
+                                        <SavingsCard onClick={() => setModal({ type: 'manageSavings' })} />                                         
                                         <AIWorksheetFactoryCard onClick={() => setModal({ type: 'aiWorksheet' })} /> 
                                         <ClassroomToolkitCard onClick={() => setModal({ type: 'classroomToolkit' })} />
                                     </div>
