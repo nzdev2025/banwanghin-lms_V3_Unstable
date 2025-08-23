@@ -1,4 +1,4 @@
-// src/components/modals/ClassroomToolkitModal.jsx
+// src/components/modals/ClassroomToolkitModal.jsx (The Corrected Final Version)
 import React from 'react';
 import Icon from '../../icons/Icon';
 import StudentPicker from '../classroom_tools/StudentPicker';
@@ -8,6 +8,7 @@ import ClassroomTimer from '../classroom_tools/ClassroomTimer';
 const ClassroomToolkitModal = ({ onClose }) => {
     const [activeTab, setActiveTab] = React.useState('picker');
 
+    // --- REMOVED 'attendance' TAB ---
     const tabs = [
         { id: 'picker', label: 'สุ่มชื่อนักเรียน', icon: 'Shuffle' },
         { id: 'grouper', label: 'จัดกลุ่ม', icon: 'UsersRound' },
@@ -41,7 +42,7 @@ const ClassroomToolkitModal = ({ onClose }) => {
                 </div>
 
                 <div className="flex-grow p-6 overflow-auto">
-                    {/* --- จุดสำคัญคือตรงนี้ครับ --- */}
+                    {/* --- REMOVED 'attendance' COMPONENT --- */}
                     {activeTab === 'picker' && <StudentPicker />}
                     {activeTab === 'grouper' && <GroupGenerator />}
                     {activeTab === 'timer' && <ClassroomTimer />}

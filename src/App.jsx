@@ -1,4 +1,4 @@
-// src/App.jsx (V6 - The Architect's Final Cut)
+// src/App.jsx (The complete and final version)
 
 import React from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -16,6 +16,10 @@ import OverallAnalytics from './components/analytics/OverallAnalytics';
 // --- Card Components ---
 import SavingsCard from './components/shared/SavingsCard';
 import AssignmentSystemCard from './components/shared/AssignmentSystemCard';
+import ClassroomToolkitCard from './components/shared/ClassroomToolkitCard';
+import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
+import AttendanceCard from './components/shared/AttendanceCard'; // +++ IMPORT CARD ใหม่ +++
+
 
 // --- Modal & View Components ---
 import SubjectSelectionView from './components/modals/SubjectSelectionView';
@@ -25,19 +29,15 @@ import SubjectManagementModal from './components/modals/SubjectManagementModal';
 import RosterManagementModal from './components/modals/RosterManagementModal';
 import StudentProfileModal from './components/modals/StudentProfileModal';
 import SavingsManagementModal from './components/modals/SavingsManagementModal';
-import ClassroomToolkitCard from './components/shared/ClassroomToolkitCard';
 import ClassroomToolkitModal from './components/modals/ClassroomToolkitModal';
-
-//... ที่ส่วน import ของ src/App.jsx
-import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
 import AIWorksheetGeneratorModal from './components/modals/AIWorksheetGeneratorModal';
-
-
+import LineNotifySettingsModal from './components/modals/LineNotifySettingsModal'; // +++ IMPORT MODAL ใหม่ +++
+import AttendanceModal from './components/modals/AttendanceModal'; // +++ IMPORT MODAL ใหม่ +++
 
 // --- Core App Layout ---
 function App() {
     const [subjects, setSubjects] = React.useState([]);
-    const [view, setView] = React.useState('dashboard'); // 'dashboard' or 'subjects'
+    const [view, setView] = React.useState('dashboard');
     const [modal, setModal] = React.useState({ type: null, data: null });
     const [appId, setAppId] = React.useState('banwanghin-lms-dev');
 
@@ -54,9 +54,7 @@ function App() {
     const handleCloseModal = () => setModal({type: null});
 
     return (
-        // ใช้ React Fragment (<>) เพื่อครอบทุกอย่างไว้ด้วยกัน
         <>
-            {/* --- ส่วนแสดงผลหลัก (จะแสดงผลทีละ View) --- */}
             {view === 'dashboard' && (
                 <div className="min-h-screen bg-gray-900 text-white font-sans relative overflow-hidden flex flex-col">
                     <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
@@ -68,6 +66,7 @@ function App() {
                         <header className="flex flex-wrap justify-between items-center mb-8 gap-4">
                             <div><h1 className="text-3xl md:text-4xl font-bold text-white">Dashboard Command Center</h1><p className="text-gray-400">เครื่องมือสำหรับครู - โรงเรียนบ้านวังหิน</p></div>
                             <div className="flex items-center gap-4">
+                                <button onClick={() => setModal({type: 'lineNotifySettings'})} className="flex items-center gap-2 bg-lime-500/20 hover:bg-lime-500/30 text-lime-300 font-bold py-2 px-4 rounded-lg"><Icon name="Bell" size={16}/>ตั้งค่าแจ้งเตือน</button>
                                 <button onClick={() => setModal({type: 'manageRoster'})} className="flex items-center gap-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-bold py-2 px-4 rounded-lg"><Icon name="Users2" size={16}/>ทะเบียนนักเรียน</button>
                                 <button onClick={() => setModal({type: 'manageSubjects'})} className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg"><Icon name="Settings" size={16}/>ตั้งค่าวิชา</button>
                             </div>
@@ -78,11 +77,13 @@ function App() {
                                 <OverallAnalytics subjects={subjects} />
                                 <div>
                                     <h2 className="text-2xl font-bold text-white mb-6">เครื่องมือหลัก</h2>
+                                    {/* +++ เพิ่ม CARD ใหม่ตรงนี้ +++ */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
                                         <SavingsCard onClick={() => setModal({ type: 'manageSavings' })} />
-                                            <AIWorksheetFactoryCard onClick={() => setModal({ type: 'aiWorksheet' })} /> 
-                                                <ClassroomToolkitCard onClick={() => setModal({ type: 'classroomToolkit' })} />
+                                        <AttendanceCard onClick={() => setModal({ type: 'manageAttendance' })} /> 
+                                        <AIWorksheetFactoryCard onClick={() => setModal({ type: 'aiWorksheet' })} /> 
+                                        <ClassroomToolkitCard onClick={() => setModal({ type: 'classroomToolkit' })} />
                                     </div>
                                 </div>
                             </div>
@@ -104,8 +105,10 @@ function App() {
                 />
             )}
 
-            {/* --- "ตู้เก็บ Modal" ที่ย้ายออกมาไว้ข้างนอก --- */}
-            {/* โค้ดส่วนนี้จะพร้อมทำงานเสมอ ไม่ว่าจะอยู่ View ไหน */}
+            {/* --- "ตู้เก็บ Modal" --- */}
+            {/* +++ เพิ่ม LOGIC การเปิด MODAL ใหม่ตรงนี้ +++ */}
+            {modal.type === 'manageAttendance' && <AttendanceModal onClose={handleCloseModal} />}
+            {modal.type === 'lineNotifySettings' && <LineNotifySettingsModal onClose={handleCloseModal} />}
             {modal.type === 'selectGrade' && <GradeSelectionModal subject={modal.data} onSelect={(subject, grade) => setModal({ type: 'classDetail', data: { subject, grade } })} onClose={handleCloseModal} />}
             {modal.type === 'classDetail' && (<ClassDetailView subject={modal.data.subject} grade={modal.data.grade} onStudentClick={handleStudentClick} onClose={handleCloseModal}/>)}
             {modal.type === 'manageSubjects' && <SubjectManagementModal subjects={subjects} onClose={handleCloseModal}/>}
