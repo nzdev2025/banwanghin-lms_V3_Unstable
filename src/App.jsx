@@ -25,10 +25,14 @@ import SubjectManagementModal from './components/modals/SubjectManagementModal';
 import RosterManagementModal from './components/modals/RosterManagementModal';
 import StudentProfileModal from './components/modals/StudentProfileModal';
 import SavingsManagementModal from './components/modals/SavingsManagementModal';
+import ClassroomToolkitCard from './components/shared/ClassroomToolkitCard';
+import ClassroomToolkitModal from './components/modals/ClassroomToolkitModal';
 
 //... ที่ส่วน import ของ src/App.jsx
 import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
 import AIWorksheetGeneratorModal from './components/modals/AIWorksheetGeneratorModal';
+
+
 
 // --- Core App Layout ---
 function App() {
@@ -78,6 +82,7 @@ function App() {
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
                                         <SavingsCard onClick={() => setModal({ type: 'manageSavings' })} />
                                             <AIWorksheetFactoryCard onClick={() => setModal({ type: 'aiWorksheet' })} /> 
+                                                <ClassroomToolkitCard onClick={() => setModal({ type: 'classroomToolkit' })} />
                                     </div>
                                 </div>
                             </div>
@@ -108,6 +113,7 @@ function App() {
             {modal.type === 'studentProfile' && <StudentProfileModal student={modal.data.student} grade={modal.data.grade} subjects={subjects} onClose={handleCloseModal} />}
             {modal.type === 'manageSavings' && <SavingsManagementModal onClose={handleCloseModal} />}
             {modal.type === 'aiWorksheet' && <AIWorksheetGeneratorModal onClose={handleCloseModal} />}
+            {modal.type === 'classroomToolkit' && <ClassroomToolkitModal onClose={handleCloseModal} />}
         </>
     );
 }
