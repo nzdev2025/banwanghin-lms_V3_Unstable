@@ -1,10 +1,14 @@
+// src/constants/theme.js (Aura-Ready Version)
+
 export const colorThemes = {
-    teal: { bg: 'bg-teal-500/10', border: 'border-teal-500/30', shadow: 'hover:shadow-teal-500/20', text: 'text-teal-300', hex: '#2dd4bf' },
-    sky: { bg: 'bg-sky-500/10', border: 'border-sky-500/30', shadow: 'hover:shadow-sky-500/20', text: 'text-sky-300', hex: '#38bdf8' },
-    purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', shadow: 'hover:shadow-purple-500/20', text: 'text-purple-300', hex: '#a855f7' },
-    rose: { bg: 'bg-rose-500/10', border: 'border-rose-500/30', shadow: 'hover:shadow-rose-500/20', text: 'text-rose-300', hex: '#f43f5e' },
-    amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', shadow: 'hover:shadow-amber-500/20', text: 'text-amber-300', hex: '#f59e0b' },
-    lime: { bg: 'bg-lime-500/10', border: 'border-lime-500/30', shadow: 'hover:shadow-lime-500/20', text: 'text-lime-300', hex: '#84cc16' },
+    teal: { bg: 'bg-teal-500/10', border: 'border-teal-500/30', shadow: 'hover:shadow-teal-500/20', text: 'text-teal-300', hex: '#2dd4bf', glow: 'shadow-glow-teal' },
+    sky: { bg: 'bg-sky-500/10', border: 'border-sky-500/30', shadow: 'hover:shadow-sky-500/20', text: 'text-sky-300', hex: '#38bdf8', glow: 'shadow-glow-sky' },
+    purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', shadow: 'hover:shadow-purple-500/20', text: 'text-purple-300', hex: '#a855f7', glow: 'shadow-glow-purple' },
+    rose: { bg: 'bg-rose-500/10', border: 'border-rose-500/30', shadow: 'hover:shadow-rose-500/20', text: 'text-rose-300', hex: '#f43f5e', glow: 'shadow-glow-rose' },
+    amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', shadow: 'hover:shadow-amber-500/20', text: 'text-amber-300', hex: '#f59e0b', glow: 'shadow-glow-amber' },
+    lime: { bg: 'bg-lime-500/10', border: 'border-lime-500/30', shadow: 'hover:shadow-lime-500/20', text: 'text-lime-300', hex: '#84cc16', glow: 'shadow-glow-lime' },
+    // Added emerald for Savings Card
+    emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', shadow: 'hover:shadow-emerald-500/20', text: 'text-emerald-300', hex: '#10b981', glow: 'shadow-glow-emerald'}
 };
 
 export const gradeStyles = {

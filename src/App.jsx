@@ -1,4 +1,4 @@
-// src/App.jsx (The complete and final version)
+// src/App.jsx (The New, Refactored & Elegant Version)
 
 import React from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -8,18 +8,15 @@ import Icon from './icons/Icon';
 import { db } from './firebase/firebase';
 
 // --- Dashboard & Analytics Components ---
-import TopStudentsLeaderboard from './components/dashboard/TopStudentsLeaderboard';
-import RecentActivityFeed from './components/dashboard/RecentActivityFeed';
-import AtRiskStudents from './components/dashboard/AtRiskStudents';
 import OverallAnalytics from './components/analytics/OverallAnalytics';
+import DashboardWidgets from './components/dashboard/DashboardWidgets'; // ++ IMPORT ใหม่ ++
 
 // --- Card Components ---
 import SavingsCard from './components/shared/SavingsCard';
 import AssignmentSystemCard from './components/shared/AssignmentSystemCard';
 import ClassroomToolkitCard from './components/shared/ClassroomToolkitCard';
 import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
-import AttendanceCard from './components/shared/AttendanceCard'; // +++ IMPORT CARD ใหม่ +++
-
+import AttendanceCard from './components/shared/AttendanceCard';
 
 // --- Modal & View Components ---
 import SubjectSelectionView from './components/modals/SubjectSelectionView';
@@ -31,8 +28,8 @@ import StudentProfileModal from './components/modals/StudentProfileModal';
 import SavingsManagementModal from './components/modals/SavingsManagementModal';
 import ClassroomToolkitModal from './components/modals/ClassroomToolkitModal';
 import AIWorksheetGeneratorModal from './components/modals/AIWorksheetGeneratorModal';
-import LineNotifySettingsModal from './components/modals/LineNotifySettingsModal'; // +++ IMPORT MODAL ใหม่ +++
-import AttendanceModal from './components/modals/AttendanceModal'; // +++ IMPORT MODAL ใหม่ +++
+import LineNotifySettingsModal from './components/modals/LineNotifySettingsModal';
+import AttendanceModal from './components/modals/AttendanceModal';
 
 // --- Core App Layout ---
 function App() {
@@ -72,12 +69,14 @@ function App() {
                             </div>
                         </header>
 
+                        {/* +++ โครงสร้าง LAYOUT ใหม่! +++ */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            
+                            {/* === Main Content (2/3 of screen) === */}
                             <div className="lg:col-span-2 space-y-8">
                                 <OverallAnalytics subjects={subjects} />
                                 <div>
-                                    <h2 className="text-2xl font-bold text-white mb-6">เครื่องมือหลัก</h2>
-                                    {/* +++ เพิ่ม CARD ใหม่ตรงนี้ +++ */}
+                                    <h2 className="text-2xl font-bold text-white mb-6">เครื่องมือหลัก (Main Tools)</h2>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                                         <AttendanceCard onClick={() => setModal({ type: 'manageAttendance' })} />
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
@@ -87,11 +86,10 @@ function App() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="lg:col-span-1 flex flex-col gap-6">
-                                 <AtRiskStudents subjects={subjects} onStudentClick={handleStudentClick} />
-                                 <TopStudentsLeaderboard subjects={subjects} onStudentClick={handleStudentClick} />
-                                 <RecentActivityFeed />
-                            </div>
+
+                            {/* === Sidebar Widgets (1/3 of screen) === */}
+                            <DashboardWidgets subjects={subjects} onStudentClick={handleStudentClick} />
+
                         </div>
                     </main>
                 </div>
@@ -105,8 +103,7 @@ function App() {
                 />
             )}
 
-            {/* --- "ตู้เก็บ Modal" --- */}
-            {/* +++ เพิ่ม LOGIC การเปิด MODAL ใหม่ตรงนี้ +++ */}
+            {/* --- Modal Container --- */}
             {modal.type === 'manageAttendance' && <AttendanceModal onClose={handleCloseModal} />}
             {modal.type === 'lineNotifySettings' && <LineNotifySettingsModal onClose={handleCloseModal} />}
             {modal.type === 'selectGrade' && <GradeSelectionModal subject={modal.data} onSelect={(subject, grade) => setModal({ type: 'classDetail', data: { subject, grade } })} onClose={handleCloseModal} />}

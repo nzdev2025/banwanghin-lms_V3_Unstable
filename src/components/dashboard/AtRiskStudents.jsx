@@ -1,3 +1,4 @@
+// src/components/dashboard/AtRiskStudents.jsx (The "High Alert" Version)
 import React from 'react';
 import { getDocs, collection } from 'firebase/firestore';
 import { db, appId } from '../../firebase/firebase';
@@ -67,7 +68,7 @@ const AtRiskStudents = ({ subjects, onStudentClick }) => {
                 }
             });
 
-            setAtRiskStudents(atRisk);
+            setAtRiskStudents(atRisk.sort((a, b) => b.lowScoreCount - a.lowScoreCount));
             setIsLoading(false);
         };
 
@@ -76,15 +77,20 @@ const AtRiskStudents = ({ subjects, onStudentClick }) => {
 
     return (
         <div className="p-6 rounded-2xl backdrop-blur-lg bg-rose-900/20 border border-rose-500/30">
-            <h3 className="text-lg font-bold text-white mb-4">นักเรียนที่น่าเป็นห่วง</h3>
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Icon name="AlertTriangle" className="text-rose-400" />
+                นักเรียนที่น่าเป็นห่วง
+            </h3>
             {isLoading ? (
-                <div className="flex items-center justify-center h-full py-4"><Icon name="Loader2" className="animate-spin text-rose-400" size={32} /></div>
+                <div className="flex items-center justify-center h-48"><Icon name="Loader2" className="animate-spin text-rose-400" size={32} /></div>
             ) : atRiskStudents.length === 0 ? (
-                <div className="text-center py-4">
-                    <p className="text-rose-200/80">ยอดเยี่ยม! ไม่มีนักเรียนที่เข้าเกณฑ์น่าเป็นห่วงในขณะนี้</p>
+                <div className="text-center py-4 flex flex-col items-center justify-center h-48">
+                    <Icon name="CheckCircle2" size={40} className="text-green-400 mb-2" />
+                    <p className="text-rose-200/80">ยอดเยี่ยม!</p>
+                    <p className="text-sm text-rose-200/60">ไม่มีนักเรียนที่เข้าเกณฑ์</p>
                 </div>
             ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-3 max-h-64 overflow-y-auto">
                     {atRiskStudents.map(student => (
                         <li key={student.id} onClick={() => onStudentClick(student, student.grade)} className="bg-rose-500/10 hover:bg-rose-500/20 p-3 rounded-lg flex items-center gap-4 cursor-pointer transition-colors">
                             <div className="bg-rose-500/20 p-2 rounded-full">

@@ -1,16 +1,21 @@
+// src/components/analytics/OverallAnalytics.jsx (The Absolute Final Version)
 import React from 'react';
 import { getDocs, collection } from 'firebase/firestore';
 import { db, appId } from '../../firebase/firebase';
 import { grades } from '../../constants/data';
 import { colorThemes } from '../../constants/theme';
 import KeyMetricCard from './KeyMetricCard';
+// --- ลบตัวเก่าออก ---
+// import SavingsActivityChart from './SavingsActivityChart';
+// +++ เพิ่มตัวใหม่ล่าสุดเข้ามา +++
+import SavingsGlowChart from './SavingsGlowChart';
 import SubjectPerformanceChart from './SubjectPerformanceChart';
-import AssignmentTypeDistributionChart from './AssignmentTypeDistributionChart';
+
 
 const OverallAnalytics = ({ subjects }) => {
+    // ... ไม่ต้องแก้ไขโค้ดส่วน State และ useEffect ...
     const [stats, setStats] = React.useState({ totalStudents: 0, overallAverage: 0, isLoading: true });
-    const [barChartData, setBarChartData] = React.useState([]);
-    const [radarChartData, setRadarChartData] = React.useState([]);
+    const [performanceData, setPerformanceData] = React.useState([]);
 
     React.useEffect(() => {
         const fetchAllStats = async () => {
@@ -24,7 +29,6 @@ const OverallAnalytics = ({ subjects }) => {
             let grandTotalScore = 0;
             let grandTotalMaxScore = 0;
             const subjectAverages = [];
-            const categoryCounts = { quiz: 0, midterm: 0, final: 0 };
 
             const studentCountPromises = grades.map(grade => getDocs(collection(db, `artifacts/${appId}/public/data/rosters/${grade}/students`)));
             const studentCountSnapshots = await Promise.all(studentCountPromises);
@@ -43,14 +47,7 @@ const OverallAnalytics = ({ subjects }) => {
                         ]);
 
                         const assignmentsMap = new Map();
-                        assignmentsSnap.forEach(doc => {
-                            const data = doc.data();
-                            assignmentsMap.set(doc.id, data);
-                            const category = data.category || 'quiz';
-                            if (Object.prototype.hasOwnProperty.call(categoryCounts, category)) {
-                                categoryCounts[category]++;
-                            }
-                        });
+                        assignmentsSnap.forEach(doc => assignmentsMap.set(doc.id, doc.data()));
 
                         scoresSnap.forEach(scoreDoc => {
                             const scores = scoreDoc.data();
@@ -62,39 +59,29 @@ const OverallAnalytics = ({ subjects }) => {
                                 }
                             }
                         });
-                    } catch (e) {
-                         // This can happen if a grade collection doesn't exist yet, which is fine.
-                    }
+                    } catch (e) { /* Ignore errors */ }
                 }
 
-                grandTotalScore += subjectTotalScore;
-                grandTotalMaxScore += subjectTotalMaxScore;
-
                 const subjectAverage = subjectTotalMaxScore > 0 ? (subjectTotalScore / subjectTotalMaxScore) * 100 : 0;
+                
+                const themeKey = subject.colorTheme || 'teal';
                 subjectAverages.push({
                     id: subject.id,
                     name: subject.name,
                     average: subjectAverage,
-                    colorTheme: subject.colorTheme,
+                    colorTheme: { key: themeKey, ...colorThemes[themeKey] },
                 });
             }
 
             const overallAverage = grandTotalMaxScore > 0 ? (grandTotalScore / grandTotalMaxScore) * 100 : 0;
 
-            setBarChartData(subjectAverages.sort((a, b) => b.average - a.average));
-
-            const radarData = [
-                { type: 'เก็บคะแนน', count: categoryCounts.quiz },
-                { type: 'กลางภาค', count: categoryCounts.midterm },
-                { type: 'ปลายภาค', count: categoryCounts.final },
-            ];
-            setRadarChartData(radarData);
-
+            setPerformanceData(subjectAverages.sort((a, b) => b.average - a.average));
             setStats({ totalStudents, overallAverage, isLoading: false });
         };
 
         fetchAllStats();
     }, [subjects]);
+
 
     return (
         <div className="space-y-6">
@@ -104,8 +91,9 @@ const OverallAnalytics = ({ subjects }) => {
                  <KeyMetricCard icon="Target" title="ค่าเฉลี่ยคะแนนรวม" value={`${stats.overallAverage.toFixed(2)}%`} isLoading={stats.isLoading} theme={colorThemes.purple} />
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <SubjectPerformanceChart data={barChartData} isLoading={stats.isLoading} />
-                <AssignmentTypeDistributionChart data={radarChartData} isLoading={stats.isLoading} />
+                <SubjectPerformanceChart data={performanceData} isLoading={stats.isLoading} />
+                {/* --- เรียกใช้กราฟเรืองแสงตัวใหม่ --- */}
+                <SavingsGlowChart />
             </div>
         </div>
     );
