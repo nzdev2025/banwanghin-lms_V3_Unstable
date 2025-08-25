@@ -48,7 +48,7 @@ const SubjectManagementModal = ({subjects, onClose}) => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-gray-800/80 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl shadow-black/50">
                 <header className="flex items-center justify-between p-4 border-b border-white/10">
-                    <h2 className="text-2xl font-bold">จัดการรายวิชา</h2>
+                    <h2 className="text-2xl font-bold text-white">จัดการรายวิชา</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-white"><Icon name="X" size={28} /></button>
                 </header>
                 <div className="p-6 flex-grow overflow-y-auto">

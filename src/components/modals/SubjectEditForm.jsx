@@ -23,15 +23,15 @@ const SubjectEditForm = ({ subject, onSave, onCancel }) => {
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <form onSubmit={handleSubmit} className="bg-gray-800 border border-white/20 rounded-2xl w-full max-w-lg shadow-2xl p-6">
-                <h3 className="text-xl font-bold mb-6">{subject.id ? 'แก้ไขวิชา' : 'สร้างวิชาใหม่'}</h3>
+                 <h3 className="text-xl font-bold mb-6 text-white">{subject.id ? 'แก้ไขวิชา' : 'สร้างวิชาใหม่'}</h3>
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">ชื่อวิชา</label>
-                        <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2" required />
+                        <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">ชื่อครูผู้สอน</label>
-                        <input type="text" name="teacherName" value={formData.teacherName} onChange={handleChange} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2" required />
+                        <input type="text" name="teacherName" value={formData.teacherName} onChange={handleChange} className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white" required />
                     </div>
                      <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">ชุดสี (Theme)</label>

@@ -1,4 +1,4 @@
-// src/components/modals/BehaviorLoggerModal.jsx
+// src/components/modals/BehaviorLoggerModal.jsx (REVISED VERSION)
 import React from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, logActivity, appId } from '../../firebase/firebase';
@@ -21,22 +21,35 @@ const behaviorTags = {
 const BehaviorLoggerModal = ({ student, grade, onClose }) => {
     const [note, setNote] = React.useState('');
     const [isSaving, setIsSaving] = React.useState(false);
+    // ++ NEW STATE: เก็บ tag ที่ถูกเลือก ++
+    const [selectedTag, setSelectedTag] = React.useState(null);
 
-    const handleSaveLog = async (type, tag) => {
+    // ++ NEW FUNCTION: จัดการการเลือก tag ++
+    const handleSelectTag = (type, tag) => {
+        setSelectedTag({ type, tag });
+    };
+
+    // ++ REVISED FUNCTION: ย้าย logic การบันทึกมาที่นี่ ++
+    const handleSaveLog = async () => {
+        if (!selectedTag) {
+            alert("กรุณาเลือกรายการพฤติกรรมก่อนบันทึกครับ");
+            return;
+        }
         setIsSaving(true);
         try {
             const logPath = `artifacts/${appId}/public/data/rosters/${grade}/students/${student.id}/behavior_logs`;
             await addDoc(collection(db, logPath), {
-                type,
-                tag: tag.label,
-                icon: tag.icon,
-                note: note,
+                type: selectedTag.type,
+                tag: selectedTag.tag.label,
+                icon: selectedTag.tag.icon,
+                note: note, // ส่ง note ไปด้วย
                 timestamp: serverTimestamp()
             });
-            logActivity('BEHAVIOR_LOG', `บันทึกพฤติกรรม '${tag.label}' ของ ${student.firstName}`);
+            logActivity('BEHAVIOR_LOG', `บันทึกพฤติกรรม '${selectedTag.tag.label}' ของ ${student.firstName}`);
             onClose(); // Close modal on success
         } catch (error) {
             console.error("Error saving behavior log:", error);
+            alert("เกิดข้อผิดพลาดในการบันทึก");
         } finally {
             setIsSaving(false);
         }
@@ -53,21 +66,37 @@ const BehaviorLoggerModal = ({ student, grade, onClose }) => {
                     <div>
                         <h4 className="font-semibold text-green-300 mb-2">พฤติกรรมเชิงบวก</h4>
                         <div className="flex flex-wrap gap-2">
-                            {behaviorTags.positive.map(tag => (
-                                <button key={tag.label} onClick={() => handleSaveLog('positive', tag)} disabled={isSaving} className="flex items-center gap-2 py-2 px-3 bg-green-500/10 hover:bg-green-500/20 text-green-300 rounded-lg transition-colors">
-                                    <Icon name={tag.icon} size={16} /> <span>{tag.label}</span>
-                                </button>
-                            ))}
+                            {behaviorTags.positive.map(tag => {
+                                const isSelected = selectedTag?.tag.label === tag.label;
+                                return (
+                                    <button 
+                                        key={tag.label} 
+                                        onClick={() => handleSelectTag('positive', tag)} 
+                                        disabled={isSaving} 
+                                        className={`flex items-center gap-2 py-2 px-3 bg-green-500/10 hover:bg-green-500/20 text-green-300 rounded-lg transition-all ${isSelected ? 'ring-2 ring-green-400' : ''}`}
+                                    >
+                                        <Icon name={tag.icon} size={16} /> <span>{tag.label}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                     <div>
                         <h4 className="font-semibold text-red-300 mb-2">พฤติกรรมที่ควรส่งเสริม</h4>
                         <div className="flex flex-wrap gap-2">
-                             {behaviorTags.needs_attention.map(tag => (
-                                <button key={tag.label} onClick={() => handleSaveLog('needs_attention', tag)} disabled={isSaving} className="flex items-center gap-2 py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-300 rounded-lg transition-colors">
-                                    <Icon name={tag.icon} size={16} /> <span>{tag.label}</span>
-                                </button>
-                            ))}
+                             {behaviorTags.needs_attention.map(tag => {
+                                 const isSelected = selectedTag?.tag.label === tag.label;
+                                 return (
+                                    <button 
+                                        key={tag.label} 
+                                        onClick={() => handleSelectTag('needs_attention', tag)} 
+                                        disabled={isSaving} 
+                                        className={`flex items-center gap-2 py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-300 rounded-lg transition-all ${isSelected ? 'ring-2 ring-red-400' : ''}`}
+                                    >
+                                        <Icon name={tag.icon} size={16} /> <span>{tag.label}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                     <div>
@@ -75,9 +104,16 @@ const BehaviorLoggerModal = ({ student, grade, onClose }) => {
                         <textarea value={note} onChange={(e) => setNote(e.target.value)} rows="3" className="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white" placeholder="เช่น ช่วยเพื่อนสอนการบ้าน..."></textarea>
                     </div>
                 </div>
-                 <footer className="p-4 border-t border-white/10 flex justify-end">
-                     <button onClick={onClose} className="py-2 px-6 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors">
-                        ปิด
+                 <footer className="p-4 border-t border-white/10 flex justify-end gap-4">
+                     <button type="button" onClick={onClose} className="py-2 px-6 text-gray-300 hover:text-white">ยกเลิก</button>
+                     <button 
+                        type="button" 
+                        onClick={handleSaveLog} 
+                        disabled={isSaving || !selectedTag} 
+                        className="flex items-center justify-center gap-2 py-2 px-6 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+                     >
+                        {isSaving ? <Icon name="Loader2" className="animate-spin" /> : <Icon name="Save" />}
+                        บันทึก
                     </button>
                 </footer>
             </div>

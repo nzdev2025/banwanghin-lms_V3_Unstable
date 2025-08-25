@@ -1,10 +1,11 @@
-// src/components/modals/StudentProfileModal.jsx
+// src/components/modals/StudentProfileModal.jsx (REVISED VERSION)
 import React from 'react';
-import { getDocs, collection, doc, onSnapshot, query, orderBy } from 'firebase/firestore'; // แก้ไข/เพิ่ม import
+import { getDocs, collection, doc, onSnapshot, query, orderBy, deleteDoc } from 'firebase/firestore';
 import { db, appId } from '../../firebase/firebase';
 import { callGeminiAPI } from '../../api/gemini';
 import Icon from '../../icons/Icon';
-import BehaviorLoggerModal from './BehaviorLoggerModal'; // +++ Import component ใหม่
+import BehaviorLoggerModal from './BehaviorLoggerModal';
+import ConfirmationModal from './ConfirmationModal'; // ++ IMPORT: Modal ยืนยัน ++
 
 const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
     const [studentScores, setStudentScores] = React.useState(null);
@@ -14,10 +15,10 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
     const [parentComment, setParentComment] = React.useState('');
     const [isGeneratingParentComment, setIsGeneratingParentComment] = React.useState(false);
     const [isCopied, setIsCopied] = React.useState(false);
-    // +++ STATE ใหม่ +++
     const [isLoggerOpen, setIsLoggerOpen] = React.useState(false);
     const [behaviorLogs, setBehaviorLogs] = React.useState([]);
-
+    // ++ NEW STATE: สำหรับจัดการ Modal ยืนยันการลบ ++
+    const [confirmModal, setConfirmModal] = React.useState({ isOpen: false, data: null });
 
     React.useEffect(() => {
         const fetchStudentData = async () => {
@@ -53,8 +54,7 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
             setStudentScores(scoresData);
             setIsLoading(false);
         };
-
-        // +++ เพิ่มการดึงข้อมูลพฤติกรรม (Real-time) +++
+        
         const logPath = `artifacts/${appId}/public/data/rosters/${grade}/students/${student.id}/behavior_logs`;
         const q = query(collection(db, logPath), orderBy("timestamp", "desc"));
         const unsubscribeLogs = onSnapshot(q, (snapshot) => {
@@ -64,9 +64,22 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
         fetchStudentData();
 
         return () => {
-            unsubscribeLogs(); // Cleanup listener
+            unsubscribeLogs(); 
         };
     }, [student, grade, subjects]);
+
+    // ++ NEW FUNCTION: จัดการการลบบันทึกพฤติกรรม ++
+    const handleDeleteBehaviorLog = async (logId) => {
+        if (!logId) return;
+        const logPath = `artifacts/${appId}/public/data/rosters/${grade}/students/${student.id}/behavior_logs`;
+        try {
+            await deleteDoc(doc(db, logPath, logId));
+            // ไม่ต้อง log activity การลบเพื่อความเรียบง่าย
+        } catch (error) {
+            console.error("Error deleting behavior log:", error);
+            alert("เกิดข้อผิดพลาดในการลบ");
+        }
+    };
 
 
     const handleGenerateSummary = async () => {
@@ -75,7 +88,6 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
         setAiSummary('');
         setParentComment('');
         
-        // +++ ผนวกข้อมูลพฤติกรรมเข้าไปใน Prompt +++
         let behaviorDetails = "ไม่มีบันทึกพฤติกรรม";
         if (behaviorLogs.length > 0) {
             behaviorDetails = behaviorLogs.map(log => `- ${log.tag} (${log.type === 'positive' ? 'เชิงบวก' : 'ควรส่งเสริม'})`).join('\n');
@@ -224,13 +236,20 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
                                 <h3 className="text-lg font-bold text-white mb-3">บันทึกพฤติกรรมล่าสุด</h3>
                                 <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
                                     {behaviorLogs.length > 0 ? behaviorLogs.map(log => (
-                                        <div key={log.id} className={`p-3 rounded-lg flex items-start gap-3 ${log.type === 'positive' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                                            <Icon name={log.icon} size={20} className={`mt-1 ${log.type === 'positive' ? 'text-green-300' : 'text-red-300'}`}/>
-                                            <div>
+                                        <div key={log.id} className={`group p-3 rounded-lg flex items-start gap-3 ${log.type === 'positive' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                                            <Icon name={log.icon} size={20} className={`mt-1 flex-shrink-0 ${log.type === 'positive' ? 'text-green-300' : 'text-red-300'}`}/>
+                                            <div className="flex-grow">
                                                 <p className="font-semibold text-white">{log.tag}</p>
                                                 {log.note && <p className="text-sm text-gray-400 italic">"{log.note}"</p>}
                                                 <p className="text-xs text-gray-500 mt-1">{formatDate(log.timestamp)}</p>
                                             </div>
+                                            {/* ++ NEW: Delete Button ++ */}
+                                            <button 
+                                                onClick={() => setConfirmModal({ isOpen: true, data: { id: log.id, name: log.tag } })} 
+                                                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity"
+                                            >
+                                                <Icon name="Trash2" size={16} />
+                                            </button>
                                         </div>
                                     )) : <p className="text-gray-500 text-center py-4">ยังไม่มีการบันทึกพฤติกรรม</p>}
                                 </div>
@@ -258,6 +277,14 @@ const StudentProfileModal = ({ student, grade, subjects, onClose }) => {
                 </div>
             </div>
             {isLoggerOpen && <BehaviorLoggerModal student={student} grade={grade} onClose={() => setIsLoggerOpen(false)} />}
+            {/* ++ NEW: Render Confirmation Modal ++ */}
+            {confirmModal.isOpen && (
+                <ConfirmationModal 
+                    item={confirmModal.data}
+                    onClose={() => setConfirmModal({ isOpen: false, data: null })}
+                    onConfirm={() => handleDeleteBehaviorLog(confirmModal.data.id)}
+                />
+            )}
         </>
     );
 };

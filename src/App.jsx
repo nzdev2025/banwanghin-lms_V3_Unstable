@@ -1,4 +1,4 @@
-// src/App.jsx (The New, Refactored & Elegant Version)
+// src/App.jsx (REVISED with new KruKit Branding)
 
 import React from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -9,7 +9,7 @@ import { db } from './firebase/firebase';
 
 // --- Dashboard & Analytics Components ---
 import OverallAnalytics from './components/analytics/OverallAnalytics';
-import DashboardWidgets from './components/dashboard/DashboardWidgets'; // ++ IMPORT ใหม่ ++
+import DashboardWidgets from './components/dashboard/DashboardWidgets';
 
 // --- Card Components ---
 import SavingsCard from './components/shared/SavingsCard';
@@ -61,18 +61,21 @@ function App() {
                     
                     <main className="relative z-10 p-4 sm:p-6 md:p-8 flex-grow w-full max-w-screen-2xl mx-auto">
                         <header className="flex flex-wrap justify-between items-center mb-8 gap-4">
-                            <div><h1 className="text-3xl md:text-4xl font-bold text-white">Dashboard Command Center</h1><p className="text-gray-400">เครื่องมือสำหรับครู - โรงเรียนบ้านวังหิน</p></div>
+                            <div>
+                                {/* --- FIX: Changed App Title --- */}
+                                <h1 className="text-3xl md:text-4xl font-bold text-white">KruKit (ครูคิท)</h1>
+                                {/* --- FIX: Updated Subtitle to match --- */}
+                                <p className="text-gray-400">ผู้ช่วยครูยุคดิจิทัล - โรงเรียนบ้านวังหิน by Wasin Suksuwan ICTTalent Connext ED</p>
+                            </div>
                             <div className="flex items-center gap-4">
                                 <button onClick={() => setModal({type: 'lineNotifySettings'})} className="flex items-center gap-2 bg-lime-500/20 hover:bg-lime-500/30 text-lime-300 font-bold py-2 px-4 rounded-lg"><Icon name="Bell" size={16}/>ตั้งค่าแจ้งเตือน</button>
                                 <button onClick={() => setModal({type: 'manageRoster'})} className="flex items-center gap-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-bold py-2 px-4 rounded-lg"><Icon name="Users2" size={16}/>ทะเบียนนักเรียน</button>
                                 <button onClick={() => setModal({type: 'manageSubjects'})} className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg"><Icon name="Settings" size={16}/>ตั้งค่าวิชา</button>
                             </div>
                         </header>
-
-                        {/* +++ โครงสร้าง LAYOUT ใหม่! +++ */}
+ปรับ
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             
-                            {/* === Main Content (2/3 of screen) === */}
                             <div className="lg:col-span-2 space-y-8">
                                 <OverallAnalytics subjects={subjects} />
                                 <div>
@@ -87,7 +90,6 @@ function App() {
                                 </div>
                             </div>
 
-                            {/* === Sidebar Widgets (1/3 of screen) === */}
                             <DashboardWidgets subjects={subjects} onStudentClick={handleStudentClick} />
 
                         </div>
