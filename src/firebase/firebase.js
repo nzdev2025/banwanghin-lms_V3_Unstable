@@ -1,5 +1,14 @@
+// src/firebase/firebase.js (Upgraded for Auth)
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+// --- [1] Import สิ่งที่จำเป็นสำหรับ Authentication ---
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut,
+    onAuthStateChanged
+} from 'firebase/auth';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,9 +21,11 @@ const firebaseConfig = {
 
 let app;
 let db;
+let auth; // --- [2] ประกาศตัวแปร auth ---
 try {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
+    auth = getAuth(app); // --- [3] กำหนดค่าให้ auth ---
 } catch (e) {
     console.error("Firebase initialization error:", e);
 }
@@ -36,4 +47,17 @@ export const logActivity = async (type, message, details = {}) => {
     }
 };
 
-export { db };
+// --- [4] สร้างและ export ฟังก์ชันสำหรับจัดการ Authentication ---
+export const handleSignUp = (email, password) => {
+    return createUserWithEmailAndPassword(auth, email, password);
+};
+
+export const handleLogin = (email, password) => {
+    return signInWithEmailAndPassword(auth, email, password);
+};
+
+export const handleLogout = () => {
+    return signOut(auth);
+};
+
+export { db, auth, onAuthStateChanged };

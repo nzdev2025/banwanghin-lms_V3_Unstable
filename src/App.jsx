@@ -1,24 +1,19 @@
-// src/App.jsx (REVISED with new KruKit Branding)
+// src/App.jsx (The "Professional UI" Final Version)
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
-// --- Core App Imports ---
-import Icon from './icons/Icon';
-import { db } from './firebase/firebase';
+import { db, auth, onAuthStateChanged, handleLogout } from './firebase/firebase';
+import LoginView from './views/LoginView'; 
 
-// --- Dashboard & Analytics Components ---
+import Icon from './icons/Icon';
 import OverallAnalytics from './components/analytics/OverallAnalytics';
 import DashboardWidgets from './components/dashboard/DashboardWidgets';
-
-// --- Card Components ---
 import SavingsCard from './components/shared/SavingsCard';
 import AssignmentSystemCard from './components/shared/AssignmentSystemCard';
 import ClassroomToolkitCard from './components/shared/ClassroomToolkitCard';
 import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
 import AttendanceCard from './components/shared/AttendanceCard';
-
-// --- Modal & View Components ---
 import SubjectSelectionView from './components/modals/SubjectSelectionView';
 import GradeSelectionModal from './components/modals/GradeSelectionModal';
 import ClassDetailView from './components/modals/ClassDetailView';
@@ -31,24 +26,48 @@ import AIWorksheetGeneratorModal from './components/modals/AIWorksheetGeneratorM
 import LineNotifySettingsModal from './components/modals/LineNotifySettingsModal';
 import AttendanceModal from './components/modals/AttendanceModal';
 
-// --- Core App Layout ---
 function App() {
+    const [user, setUser] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
+
     const [subjects, setSubjects] = React.useState([]);
     const [view, setView] = React.useState('dashboard');
     const [modal, setModal] = React.useState({ type: null, data: null });
     const [appId, setAppId] = React.useState('banwanghin-lms-dev');
 
-    React.useEffect(() => {
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            setAuthLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+
+    useEffect(() => {
+        if (!user) return; 
         const subjectsMetaPath = `artifacts/${appId}/public/data/subjects_meta`;
         const q = query(collection(db, subjectsMetaPath), orderBy("createdAt"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             setSubjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         });
         return () => unsubscribe();
-    }, [appId]);
+    }, [appId, user]);
 
     const handleStudentClick = (student, grade) => setModal({ type: 'studentProfile', data: { student, grade } });
     const handleCloseModal = () => setModal({type: null});
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <Icon name="Loader2" className="animate-spin text-teal-400" size={48} />
+            </div>
+        );
+    }
+
+    if (!user) {
+        return <LoginView />;
+    }
 
     return (
         <>
@@ -60,17 +79,28 @@ function App() {
                     </div>
                     
                     <main className="relative z-10 p-4 sm:p-6 md:p-8 flex-grow w-full max-w-screen-2xl mx-auto">
+                        {/* --- [!] HEADER ที่อัปเกรดแล้ว --- */}
                         <header className="flex flex-wrap justify-between items-center mb-8 gap-4">
                             <div>
-                                {/* --- FIX: Changed App Title --- */}
                                 <h1 className="text-3xl md:text-4xl font-bold text-white">KruKit (ครูคิท)</h1>
-                                {/* --- FIX: Updated Subtitle to match --- */}
                                 <p className="text-gray-400">ผู้ช่วยครูยุคดิจิทัล - โรงเรียนบ้านวังหิน by Wasin Suksuwan ICTTalent Connext ED</p>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <button onClick={() => setModal({type: 'lineNotifySettings'})} className="flex items-center gap-2 bg-lime-500/20 hover:bg-lime-500/30 text-lime-300 font-bold py-2 px-4 rounded-lg"><Icon name="Bell" size={16}/>ตั้งค่าแจ้งเตือน</button>
-                                <button onClick={() => setModal({type: 'manageRoster'})} className="flex items-center gap-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-bold py-2 px-4 rounded-lg"><Icon name="Users2" size={16}/>ทะเบียนนักเรียน</button>
-                                <button onClick={() => setModal({type: 'manageSubjects'})} className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg"><Icon name="Settings" size={16}/>ตั้งค่าวิชา</button>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {/* --- [A] User Profile Display แบบใหม่ --- */}
+                                <div className="flex items-center gap-3 bg-gray-800/50 p-2 rounded-lg border border-white/10">
+                                    <div className="w-8 h-8 rounded-full bg-teal-500/50 flex items-center justify-center font-bold text-teal-200 flex-shrink-0">
+                                        {user.email.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="text-sm text-gray-300 hidden sm:block truncate">{user.email}</span>
+                                    <button onClick={handleLogout} className="p-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-md" title="ออกจากระบบ">
+                                        <Icon name="LogOut" size={18}/>
+                                    </button>
+                                </div>
+                                
+                                {/* --- [B] ย้ายปุ่มตั้งค่ากลับมาที่ Header และเปลี่ยนเป็นไอคอน --- */}
+                                <button onClick={() => setModal({type: 'manageRoster'})} className="p-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded-lg" title="ทะเบียนนักเรียน"><Icon name="Users2" size={20}/></button>
+                                <button onClick={() => setModal({type: 'lineNotifySettings'})} className="p-2 bg-lime-500/20 hover:bg-lime-500/30 text-lime-300 rounded-lg" title="ตั้งค่าแจ้งเตือน"><Icon name="Bell" size={20}/></button>
+                                <button onClick={() => setModal({type: 'manageSubjects'})} className="p-2 bg-gray-700/50 hover:bg-gray-700 text-white rounded-lg" title="ตั้งค่าวิชา"><Icon name="Settings" size={20}/></button>
                             </div>
                         </header>
 
@@ -80,6 +110,7 @@ function App() {
                                 <OverallAnalytics subjects={subjects} />
                                 <div>
                                     <h2 className="text-2xl font-bold text-white mb-6">เครื่องมือหลัก (Main Tools)</h2>
+                                    {/* --- [C] เอาปุ่มที่ย้ายออกไปแล้วออกจาก Grid นี้ --- */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                                         <AttendanceCard onClick={() => setModal({ type: 'manageAttendance' })} />
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
@@ -105,7 +136,7 @@ function App() {
                 />
             )}
 
-            {/* --- Modal Container --- */}
+            {/* Modal Container */}
             {modal.type === 'manageAttendance' && <AttendanceModal onClose={handleCloseModal} />}
             {modal.type === 'lineNotifySettings' && <LineNotifySettingsModal onClose={handleCloseModal} />}
             {modal.type === 'selectGrade' && <GradeSelectionModal subject={modal.data} onSelect={(subject, grade) => setModal({ type: 'classDetail', data: { subject, grade } })} onClose={handleCloseModal} />}
