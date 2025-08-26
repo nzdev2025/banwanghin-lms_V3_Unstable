@@ -1,4 +1,4 @@
-// src/components/modals/StudentSavingsDetailModal.jsx
+// src/components/modals/StudentSavingsDetailModal.jsx (The "Text Color Polish" Version)
 
 import React from 'react';
 import { collection, onSnapshot, query, orderBy, doc, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -16,14 +16,12 @@ const StudentSavingsDetailModal = ({ student, grade, onClose }) => {
     const savingsBasePath = `artifacts/${appId}/public/data/savings/${grade}/students/${student.id}`;
 
     React.useEffect(() => {
-        // Listen for transaction history
         const transactionsQuery = query(collection(db, `${savingsBasePath}/transactions`), orderBy("timestamp", "desc"));
         const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
             setTransactions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
             setIsLoading(false);
         });
 
-        // Listen for summary balance
         const summaryDocRef = doc(db, savingsBasePath);
         const unsubSummary = onSnapshot(summaryDocRef, (doc) => {
             setBalance(doc.exists() ? doc.data().totalBalance : 0);
@@ -57,14 +55,12 @@ const StudentSavingsDetailModal = ({ student, grade, onClose }) => {
                     ? currentBalance + transactionAmount
                     : currentBalance - transactionAmount;
 
-                // Create transaction record
                 transaction.set(newTransactionRef, {
                     amount: transactionAmount,
                     type: type,
                     timestamp: serverTimestamp()
                 });
 
-                // Update summary
                 transaction.set(summaryDocRef, {
                     totalBalance: newBalance,
                     lastUpdated: serverTimestamp()
@@ -72,7 +68,7 @@ const StudentSavingsDetailModal = ({ student, grade, onClose }) => {
             });
             
             logActivity('SAVINGS_TRANSACTION', `ทำรายการ ${type} จำนวน ${transactionAmount} บาท ของ ${student.firstName}`);
-            setAmount(''); // Reset input
+            setAmount('');
 
         } catch (error) {
             console.error("Transaction failed: ", error);
@@ -92,47 +88,59 @@ const StudentSavingsDetailModal = ({ student, grade, onClose }) => {
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-gray-800 border border-emerald-500/50 rounded-2xl w-full max-w-lg h-[85vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <header className="p-4 border-b border-white/10">
+                <header className="p-4 border-b border-white/10 flex-shrink-0">
                     <h3 className="text-xl font-bold text-white">{student.firstName} {student.lastName}</h3>
                     <p className="text-emerald-300">ยอดเงินคงเหลือ: <span className="font-mono text-2xl">{balance.toFixed(2)}</span> บาท</p>
                 </header>
 
-                <div className="p-6">
+                <div className="p-6 flex-shrink-0">
                     <form onSubmit={handleTransaction} className="flex items-end gap-3">
                         <div className="flex-grow">
                             <label className="block text-sm font-medium text-gray-300 mb-1">จำนวนเงิน</label>
-                            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-gray-900/50 p-2 rounded-lg border border-gray-600" placeholder="0.00" required />
+                            {/* --- [1] เพิ่ม text-white เพื่อให้ตัวเลขที่พิมพ์เป็นสีขาว --- */}
+                            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-gray-700/50 p-2 rounded-lg border border-gray-600 text-white" placeholder="0.00" required />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-1">รายการ</label>
-                            <select value={type} onChange={e => setType(e.target.value)} className="w-full bg-gray-900/50 p-2 rounded-lg border border-gray-600 h-[42px] text-white">
+                            <select value={type} onChange={e => setType(e.target.value)} className="w-full bg-gray-700/50 p-2 rounded-lg border border-gray-600 h-[42px] text-white">
                                 <option value="deposit">ฝากเงิน</option>
                                 <option value="withdraw">ถอนเงิน</option>
                             </select>
                         </div>
-                        <button type="submit" disabled={isSaving} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg h-[42px] disabled:bg-gray-500">
+                        <button type="submit" disabled={isSaving} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg h-[42px] disabled:bg-gray-500 flex-shrink-0">
                            {isSaving ? <Icon name="Loader2" className="animate-spin"/> : 'ยืนยัน'}
                         </button>
                     </form>
                 </div>
 
-                <div className="px-6 pb-6 flex-grow overflow-y-auto">
-                    <h4 className="text-lg font-bold mb-2">ประวัติความเคลื่อนไหว</h4>
-                    {isLoading ? <p>Loading...</p> : (
-                        <ul className="space-y-2">
-                            {transactions.map(t => (
-                                <li key={t.id} className={`flex justify-between items-center p-2 rounded-md ${t.type === 'deposit' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                                    <div>
-                                        <p className={`font-bold ${t.type === 'deposit' ? 'text-green-300' : 'text-red-300'}`}>{t.type === 'deposit' ? 'ฝากเงิน' : 'ถอนเงิน'}</p>
-                                        <p className="text-xs text-gray-400">{formatDate(t.timestamp)}</p>
+                <div className="px-6 pb-6 flex-grow flex flex-col min-h-0">
+                    {/* --- [2] เพิ่ม text-white ให้กับหัวข้อ --- */}
+                    <h4 className="text-lg font-bold mb-2 flex-shrink-0 text-white">ประวัติความเคลื่อนไหว</h4>
+                    <div className="bg-gray-900/50 rounded-xl p-4 flex-grow overflow-y-auto">
+                        {isLoading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <Icon name="Loader2" className="animate-spin text-emerald-400" size={32} />
+                            </div>
+                        ) : (
+                            <ul className="space-y-2">
+                                {transactions.length > 0 ? transactions.map(t => (
+                                    <li key={t.id} className={`flex justify-between items-center p-2 rounded-md ${t.type === 'deposit' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                                        <div>
+                                            <p className={`font-bold ${t.type === 'deposit' ? 'text-green-300' : 'text-red-300'}`}>{t.type === 'deposit' ? 'ฝากเงิน' : 'ถอนเงิน'}</p>
+                                            <p className="text-xs text-gray-400">{formatDate(t.timestamp)}</p>
+                                        </div>
+                                        <p className={`font-mono text-lg ${t.type === 'deposit' ? 'text-green-300' : 'text-red-300'}`}>
+                                           {t.type === 'deposit' ? '+' : '-'}{t.amount.toFixed(2)}
+                                        </p>
+                                    </li>
+                                )) : (
+                                    <div className="flex items-center justify-center h-full text-gray-500">
+                                        <p>ยังไม่มีรายการเคลื่อนไหว</p>
                                     </div>
-                                    <p className={`font-mono text-lg ${t.type === 'deposit' ? 'text-green-300' : 'text-red-300'}`}>
-                                       {t.type === 'deposit' ? '+' : '-'}{t.amount.toFixed(2)}
-                                    </p>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                                )}
+                            </ul>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

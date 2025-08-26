@@ -1,11 +1,12 @@
 import React from 'react';
-import { collection, onSnapshot, query, orderBy, setDoc, addDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, setDoc, addDoc, doc, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { db, logActivity, appId } from '../../firebase/firebase';
 import { grades } from '../../constants/data';
 import Icon from '../../icons/Icon';
 import StudentModal from './StudentModal';
 import ConfirmationModal from './ConfirmationModal';
 import ImportStudentsModal from './ImportStudentsModal';
+
 
 const RosterManagementModal = ({ onClose }) => {
     const [selectedGrade, setSelectedGrade] = React.useState('p1');
@@ -55,11 +56,38 @@ const RosterManagementModal = ({ onClose }) => {
         if (!id || !db) return;
         const studentToDelete = students.find(s => s.id === id);
         if(!studentToDelete) return;
+
+        // --- START: โค้ดที่เพิ่มเข้ามาเพื่อลบข้อมูลที่เกี่ยวข้อง ---
+        const savingsBasePath = `artifacts/${appId}/public/data/savings/${selectedGrade}`;
+        const savingsDocRef = doc(db, `${savingsBasePath}/students`, id);
+        const transactionsColRef = collection(db, `${savingsBasePath}/students/${id}/transactions`);
+
         try {
-            await deleteDoc(doc(db, `${rosterBasePath}/students`, id));
-            logActivity('STUDENT_DELETE', `ลบนักเรียน <strong>${studentToDelete.firstName}</strong> ออกจากชั้น ป.${selectedGrade.replace('p','')}`);
+            const batch = writeBatch(db);
+
+            // 1. ลบข้อมูลนักเรียนออกจากทะเบียน
+            const studentDocRef = doc(db, `${rosterBasePath}/students`, id);
+            batch.delete(studentDocRef);
+
+            // 2. ลบประวัติการทำรายการออมทรัพย์ทั้งหมด (Subcollection)
+            const transactionsSnap = await getDocs(transactionsColRef);
+            transactionsSnap.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            // 3. ลบเอกสารสรุปยอดออมทรัพย์
+            batch.delete(savingsDocRef);
+
+            // 4. ทำการลบทั้งหมดในครั้งเดียว
+            await batch.commit();
+            
+            logActivity('STUDENT_DELETE', `ลบนักเรียน <strong>${studentToDelete.firstName}</strong> และข้อมูลการออมทรัพย์ทั้งหมด ออกจากชั้น ป.${selectedGrade.replace('p','')}`);
             setModal({ type: null, data: null });
-        } catch (error) { console.error("Error deleting student:", error); }
+
+        } catch (error) { 
+            console.error("Error deleting student and related data:", error); 
+            alert("เกิดข้อผิดพลาดในการลบข้อมูล: " + error.message);
+        }
     };
 
     const handleImportStudents = async (newStudents) => {
