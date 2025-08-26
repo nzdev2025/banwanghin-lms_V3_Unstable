@@ -73,7 +73,7 @@ function App() {
                                 <button onClick={() => setModal({type: 'manageSubjects'})} className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg"><Icon name="Settings" size={16}/>ตั้งค่าวิชา</button>
                             </div>
                         </header>
-ปรับ
+
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             
                             <div className="lg:col-span-2 space-y-8">

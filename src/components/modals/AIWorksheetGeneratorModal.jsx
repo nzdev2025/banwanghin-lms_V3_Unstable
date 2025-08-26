@@ -1,4 +1,4 @@
-// src/components/modals/AIWorksheetGeneratorModal.jsx (The Final Centered Version)
+// src/components/modals/AIWorksheetGeneratorModal.jsx (V2 - Upgraded AI Logic)
 import React from 'react';
 import Icon from '../../icons/Icon';
 import { callGeminiAPI } from '../../api/gemini';
@@ -23,7 +23,7 @@ const AIWorksheetGeneratorModal = ({ onClose }) => {
     };
 
     const getPromptForQuestionType = () => {
-        const { questionType, numQuestions } = formData;
+        const { questionType } = formData;
         
         const createQuestionExample = (type, text, options = '') => `{ "id": 1, "text": "${text}"${options} }`;
         let questionExample = '';
@@ -64,16 +64,65 @@ const AIWorksheetGeneratorModal = ({ onClose }) => {
         setError('');
         let result = '';
         const questionStructure = getPromptForQuestionType();
-        const prompt = `คุณคือ AI ผู้เชี่ยวชาญด้านการออกแบบสื่อการสอน... **โจทย์:** ... "จำนวนคำถามที่ต้องการ": ${formData.numQuestions} ข้อ ... **โครงสร้าง JSON ที่ต้องการ:** ... "sections": [ ${questionStructure} ] ... **กฎ:** ... 2. **ต้องสร้างคำถาม...ให้มีจำนวนเท่ากับ "จำนวนคำถามที่ต้องการ" (${formData.numQuestions} ข้อ) อย่างเคร่งครัด** ... 3. **ต้องสร้าง section ให้มี "type" ตรงกับที่ระบุ...เท่านั้น** ...`;
+
+        // --- NEW, SMARTER PROMPT ---
+        const prompt = `
+            ### PERSONA ###
+            You are an expert instructional designer for Thai primary school students. Your task is to create educational materials that are accurate, engaging, and perfectly suited for the specified grade level.
+
+            ### PRIMARY TASK ###
+            Generate a JSON object for a worksheet or exam based on the provided input data. The generated content **MUST STRICTLY ADHERE TO THE GIVEN TOPIC**.
+
+            ### STRICT RULES ###
+            1.  **TOPIC ADHERENCE:** All generated questions and content must be **directly and exclusively** related to the "topic" provided. Do not include any information or questions outside of this topic.
+            2.  **GRADE LEVEL APPROPRIATENESS:** You must tailor the vocabulary, complexity, and examples to be suitable for the specified "gradeLevel".
+            3.  **QUESTION COUNT:** The number of questions in the "questions" array (or items in the "content" array for fill-in-the-blanks) **must exactly match** the "numQuestions" specified. No more, no less.
+            4.  **JSON FORMAT:** The output **must be a valid JSON object** that strictly follows the "OUTPUT FORMAT" structure provided below. Do not output any text, explanation, or markdown formatting before or after the JSON object.
+            5.  **LANGUAGE:** All generated text (instructions, questions, options, etc.) must be in **Thai language**.
+
+            ### INPUT DATA ###
+            - Document Type: "${formData.docType}"
+            - Main Topic: "${formData.topic}"
+            - Grade Level: "${formData.gradeLevel}"
+            - Number of Questions: ${formData.numQuestions}
+            - Question Type/Structure: ${formData.questionType}
+            - Special Instructions: "${formData.specialInstructions || 'None'}"
+
+            ### OUTPUT FORMAT ###
+            The final output must be a single JSON object with the following structure. Do not deviate from this structure.
+
+            \`\`\`json
+            {
+              "title": "[สร้างชื่อเอกสารที่เหมาะสมจาก Main Topic]",
+              "subject": "[สร้างชื่อวิชาที่เกี่ยวข้องจาก Main Topic]",
+              "sections": [
+                ${questionStructure}
+              ]
+            }
+            \`\`\`
+        `;
 
         try {
             result = await callGeminiAPI(prompt);
-            const jsonString = result.match(/\{[\s\S]*\}/)[0];
+            // เพิ่มความสามารถในการดึง JSON ที่อยู่ใน Code Block (```json ... ```)
+            const jsonMatch = result.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error("AI did not return a valid JSON object.");
+            }
+            const jsonString = jsonMatch[0];
             const parsedData = JSON.parse(jsonString);
+            
+            // ตรวจสอบขั้นสุดท้ายว่า AI สร้างจำนวนข้อตรงตามสั่งหรือไม่
+            const section = parsedData.sections[0];
+            const questionCount = section.questions?.length || section.content?.length || 0;
+            if (questionCount !== formData.numQuestions) {
+                 throw new Error(`AI generated ${questionCount} questions, but ${formData.numQuestions} were requested. Please try again.`);
+            }
+
             setWorksheetData(parsedData);
         } catch (e) {
             console.error("Failed to parse AI response:", e, "Raw response:", result);
-            setError("AI ไม่สามารถสร้างข้อมูลได้ อาจเกิดจากข้อผิดพลาดชั่วคราว กรุณารอ 1 นาทีแล้วลองอีกครั้ง");
+            setError(`เกิดข้อผิดพลาด: ${e.message} อาจเกิดจากข้อผิดพลาดชั่วคราว กรุณารอ 1 นาทีแล้วลองอีกครั้งครับ`);
             setWorksheetData(null);
         } finally {
             setIsGenerating(false);
@@ -104,7 +153,6 @@ const AIWorksheetGeneratorModal = ({ onClose }) => {
                      </div>
                      <div className="w-2/3 bg-gray-900/50 p-4 rounded-lg overflow-y-auto print:w-full print:h-auto print:p-0 print:overflow-visible print:bg-transparent">
                         <div id="a4-preview-area" className="a4-paper bg-white text-black p-12 shadow-lg mx-auto print:shadow-none print:mx-0 print:p-0 font-sarabun">
-                            {/* **FIX: เปลี่ยนจาก text-center เป็น flexbox เพื่อความแม่นยำ** */}
                             <div className="school-header flex flex-col items-center mb-6">
                                 <h1 className="text-xl font-bold">โรงเรียนบ้านวังหิน</h1>
                                 <h2 className="text-lg">{worksheetData?.title || currentTexts.title}</h2>
