@@ -1,16 +1,15 @@
-// src/components/classroom_tools/StudentPicker.jsx
+// src/components/classroom_tools/StudentPicker.jsx (The "Truly Responsive" Version)
 import React from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db, appId } from '../../firebase/firebase';
 import { grades } from '../../constants/data';
 import Icon from '../../icons/Icon';
 
-const StudentPicker = () => {
+const StudentPicker = ({ size }) => { // รับ prop 'size'
     const [selectedGrade, setSelectedGrade] = React.useState('p1');
     const [students, setStudents] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
     
-    // --- NEW STATES ---
     const [isPicking, setIsPicking] = React.useState(false);
     const [pickedStudent, setPickedStudent] = React.useState(null);
     const [allowDuplicates, setAllowDuplicates] = React.useState(true);
@@ -20,7 +19,7 @@ const StudentPicker = () => {
         if (!db || !selectedGrade) return;
         setIsLoading(true);
         setPickedStudent(null);
-        setPickedHistory([]); // Reset history when grade changes
+        setPickedHistory([]); 
         const rosterBasePath = `artifacts/${appId}/public/data/rosters/${selectedGrade}`;
         const q = query(collection(db, `${rosterBasePath}/students`), orderBy("studentNumber"));
         
@@ -71,10 +70,13 @@ const StudentPicker = () => {
     };
 
     const remainingCount = students.length - pickedHistory.length;
+    
+    const getResponsiveClass = (baseClass, largeClass, threshold = 600) => {
+        return `transition-all duration-300 ${size?.width > threshold ? largeClass : baseClass}`;
+    };
 
     return (
         <div className="flex flex-col h-full">
-            {/* --- Controls Section --- */}
             <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div className="flex flex-wrap items-end gap-4">
                     <div>
@@ -110,17 +112,16 @@ const StudentPicker = () => {
                 </button>
             </div>
 
-            {/* --- Display Section --- */}
             <div className="flex-grow bg-gray-900/50 rounded-xl p-6 flex items-center justify-center text-center">
                  {isLoading ? (
                     <Icon name="Loader2" className="animate-spin text-amber-400" size={48} />
                 ) : pickedStudent ? (
                     <div className="animate-fade-in">
-                        <p className="text-2xl text-gray-400">ผู้โชคดีคือ...</p>
-                        <h2 className={`text-6xl font-bold text-amber-300 my-2 transition-all duration-100 ${isPicking ? 'blur-md' : 'blur-0'}`}>
+                        <p className={getResponsiveClass('text-xl', 'text-2xl')}>ผู้โชคดีคือ...</p>
+                        <h2 className={`font-bold text-amber-300 my-2 duration-100 ${isPicking ? 'blur-md' : 'blur-0'} ${getResponsiveClass('text-4xl', 'text-6xl', 550)}`}>
                             {pickedStudent.firstName} {pickedStudent.lastName}
                         </h2>
-                        <p className="text-xl text-gray-400">เลขที่ {pickedStudent.studentNumber}</p>
+                        <p className={getResponsiveClass('text-lg', 'text-xl')}>เลขที่ {pickedStudent.studentNumber}</p>
                     </div>
                 ) : (
                     <div className="text-center text-gray-500">

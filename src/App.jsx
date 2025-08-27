@@ -1,4 +1,4 @@
-// src/App.jsx (The "Professional UI" Final Version)
+// src/App.jsx (The "Ultimate UX" Final Version with Stacked Modals & Toolkit Widget)
 
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -14,7 +14,7 @@ import AssignmentSystemCard from './components/shared/AssignmentSystemCard';
 import ClassroomToolkitCard from './components/shared/ClassroomToolkitCard';
 import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
 import AttendanceCard from './components/shared/AttendanceCard';
-import HealthCard from './components/shared/HealthCard'; // ++ 1. IMPORT
+import HealthCard from './components/shared/HealthCard';
 import SubjectSelectionView from './components/modals/SubjectSelectionView';
 import GradeSelectionModal from './components/modals/GradeSelectionModal';
 import ClassDetailView from './components/modals/ClassDetailView';
@@ -26,7 +26,7 @@ import ClassroomToolkitModal from './components/modals/ClassroomToolkitModal';
 import AIWorksheetGeneratorModal from './components/modals/AIWorksheetGeneratorModal';
 import LineNotifySettingsModal from './components/modals/LineNotifySettingsModal';
 import AttendanceModal from './components/modals/AttendanceModal';
-import HealthRecordModal from './components/modals/HealthRecordModal'; // ++ 2. IMPORT
+import HealthRecordModal from './components/modals/HealthRecordModal';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -34,8 +34,12 @@ function App() {
 
     const [subjects, setSubjects] = React.useState([]);
     const [view, setView] = React.useState('dashboard');
-    const [modal, setModal] = React.useState({ type: null, data: null });
     const [appId, setAppId] = React.useState('banwanghin-lms-dev');
+
+    // --- 🚀 UPGRADE #1: เปลี่ยน state จาก object เป็น array สำหรับ Modal Stack ---
+    const [modalStack, setModalStack] = React.useState([]);
+    // --- 🚀 UPGRADE #2: เพิ่ม State สำหรับ Toolkit Widget ---
+    const [isToolkitOpen, setIsToolkitOpen] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -56,8 +60,17 @@ function App() {
         return () => unsubscribe();
     }, [appId, user]);
 
-    const handleStudentClick = (student, grade) => setModal({ type: 'studentProfile', data: { student, grade } });
-    const handleCloseModal = () => setModal({type: null});
+    // --- ฟังก์ชันจัดการ Modal Stack ---
+    const openModal = (type, data = null) => {
+        setModalStack(prevStack => [...prevStack, { type, data }]);
+    };
+
+    const closeModal = () => {
+        setModalStack(prevStack => prevStack.slice(0, prevStack.length - 1));
+    };
+    
+    // ส่งฟังก์ชัน openModal ไปแทน
+    const handleStudentClick = (student, grade) => openModal('studentProfile', { student, grade });
 
     if (authLoading) {
         return (
@@ -73,6 +86,9 @@ function App() {
 
     return (
         <>
+            {/* --- Render Toolkit Widget แยกต่างหาก --- */}
+            {isToolkitOpen && <ClassroomToolkitModal onClose={() => setIsToolkitOpen(false)} isWidget={true} />}
+
             {view === 'dashboard' && (
                 <div className="min-h-screen bg-gray-900 text-white font-sans relative overflow-hidden flex flex-col">
                     <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
@@ -81,14 +97,12 @@ function App() {
                     </div>
                     
                     <main className="relative z-10 p-4 sm:p-6 md:p-8 flex-grow w-full max-w-screen-2xl mx-auto">
-                        {/* --- [!] HEADER ที่อัปเกรดแล้ว --- */}
                         <header className="flex flex-wrap justify-between items-center mb-8 gap-4">
                             <div>
                                 <h1 className="text-3xl md:text-4xl font-bold text-white">KruKit (ครูคิท)</h1>
                                 <p className="text-gray-400">ผู้ช่วยครูยุคดิจิทัล - โรงเรียนบ้านวังหิน by Wasin Suksuwan ICTTalent Connext ED</p>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
-                                {/* --- [A] User Profile Display แบบใหม่ --- */}
                                 <div className="flex items-center gap-3 bg-gray-800/50 p-2 rounded-lg border border-white/10">
                                     <div className="w-8 h-8 rounded-full bg-teal-500/50 flex items-center justify-center font-bold text-teal-200 flex-shrink-0">
                                         {user.email.charAt(0).toUpperCase()}
@@ -98,11 +112,9 @@ function App() {
                                         <Icon name="LogOut" size={18}/>
                                     </button>
                                 </div>
-                                
-                                {/* --- [B] ย้ายปุ่มตั้งค่ากลับมาที่ Header และเปลี่ยนเป็นไอคอน --- */}
-                                <button onClick={() => setModal({type: 'manageRoster'})} className="p-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded-lg" title="ทะเบียนนักเรียน"><Icon name="Users2" size={20}/></button>
-                                <button onClick={() => setModal({type: 'lineNotifySettings'})} className="p-2 bg-lime-500/20 hover:bg-lime-500/30 text-lime-300 rounded-lg" title="ตั้งค่าแจ้งเตือน"><Icon name="Bell" size={20}/></button>
-                                <button onClick={() => setModal({type: 'manageSubjects'})} className="p-2 bg-gray-700/50 hover:bg-gray-700 text-white rounded-lg" title="ตั้งค่าวิชา"><Icon name="Settings" size={20}/></button>
+                                <button onClick={() => openModal('manageRoster')} className="p-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded-lg" title="ทะเบียนนักเรียน"><Icon name="Users2" size={20}/></button>
+                                <button onClick={() => openModal('lineNotifySettings')} className="p-2 bg-lime-500/20 hover:bg-lime-500/30 text-lime-300 rounded-lg" title="ตั้งค่าแจ้งเตือน"><Icon name="Bell" size={20}/></button>
+                                <button onClick={() => openModal('manageSubjects')} className="p-2 bg-gray-700/50 hover:bg-gray-700 text-white rounded-lg" title="ตั้งค่าวิชา"><Icon name="Settings" size={20}/></button>
                             </div>
                         </header>
 
@@ -112,14 +124,14 @@ function App() {
                                 <OverallAnalytics subjects={subjects} />
                                 <div>
                                     <h2 className="text-2xl font-bold text-white mb-6">เครื่องมือหลัก (Main Tools)</h2>
-                                    {/* --- [C] เอาปุ่มที่ย้ายออกไปแล้วออกจาก Grid นี้ --- */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                                        <AttendanceCard onClick={() => setModal({ type: 'manageAttendance' })} />
+                                        <AttendanceCard onClick={() => openModal('manageAttendance')} />
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
-                                        <SavingsCard onClick={() => setModal({ type: 'manageSavings' })} />
-                                        <HealthCard onClick={() => setModal({ type: 'healthRecord' })} /> {/* ++ 3. ADD CARD ++ */}
-                                        <AIWorksheetFactoryCard onClick={() => setModal({ type: 'aiWorksheet' })} /> 
-                                        <ClassroomToolkitCard onClick={() => setModal({ type: 'classroomToolkit' })} />
+                                        <SavingsCard onClick={() => openModal('manageSavings')} />
+                                        <HealthCard onClick={() => openModal('healthRecord')} />
+                                        <AIWorksheetFactoryCard onClick={() => openModal('aiWorksheet')} /> 
+                                        {/* เปลี่ยน onClick ของ ClassroomToolkitCard */}
+                                        <ClassroomToolkitCard onClick={() => setIsToolkitOpen(true)} />
                                     </div>
                                 </div>
                             </div>
@@ -134,23 +146,42 @@ function App() {
             {view === 'subjects' && (
                 <SubjectSelectionView 
                     subjects={subjects}
-                    onSubjectClick={(subject) => setModal({ type: 'selectGrade', data: subject })}
+                    onSubjectClick={(subject) => openModal('selectGrade', subject)}
                     onClose={() => setView('dashboard')}
                 />
             )}
 
-            {/* Modal Container */}
-            {modal.type === 'manageAttendance' && <AttendanceModal onClose={handleCloseModal} />}
-            {modal.type === 'lineNotifySettings' && <LineNotifySettingsModal onClose={handleCloseModal} />}
-            {modal.type === 'selectGrade' && <GradeSelectionModal subject={modal.data} onSelect={(subject, grade) => setModal({ type: 'classDetail', data: { subject, grade } })} onClose={handleCloseModal} />}
-            {modal.type === 'classDetail' && (<ClassDetailView subject={modal.data.subject} grade={modal.data.grade} onStudentClick={handleStudentClick} onClose={handleCloseModal}/>)}
-            {modal.type === 'manageSubjects' && <SubjectManagementModal subjects={subjects} onClose={handleCloseModal}/>}
-            {modal.type === 'manageRoster' && <RosterManagementModal onClose={handleCloseModal} />}
-            {modal.type === 'studentProfile' && <StudentProfileModal student={modal.data.student} grade={modal.data.grade} subjects={subjects} onClose={handleCloseModal} />}
-            {modal.type === 'manageSavings' && <SavingsManagementModal onClose={handleCloseModal} />}
-            {modal.type === 'aiWorksheet' && <AIWorksheetGeneratorModal onClose={handleCloseModal} />}
-            {modal.type === 'classroomToolkit' && <ClassroomToolkitModal onClose={handleCloseModal} />}
-            {modal.type === 'healthRecord' && <HealthRecordModal onClose={handleCloseModal} />} {/* ++ 4. ADD MODAL RENDER ++ */}
+            {/* Modal Container: Render Modal ตัวบนสุดของ Stack เท่านั้น */}
+            {modalStack.map((modal, index) => {
+                if (index !== modalStack.length - 1) return null;
+
+                switch (modal.type) {
+                    case 'manageAttendance':
+                        return <AttendanceModal key={index} onClose={closeModal} />;
+                    case 'lineNotifySettings':
+                        return <LineNotifySettingsModal key={index} onClose={closeModal} />;
+                    case 'selectGrade':
+                        return <GradeSelectionModal key={index} subject={modal.data} onSelect={(subject, grade) => openModal('classDetail', { subject, grade })} onClose={closeModal} />;
+                    case 'classDetail':
+                        return <ClassDetailView key={index} subject={modal.data.subject} grade={modal.data.grade} onStudentClick={handleStudentClick} onClose={closeModal}/>;
+                    case 'manageSubjects':
+                         return <SubjectManagementModal key={index} subjects={subjects} onClose={closeModal}/>;
+                    case 'manageRoster':
+                         return <RosterManagementModal key={index} onClose={closeModal} />;
+                    case 'studentProfile':
+                         return <StudentProfileModal key={index} student={modal.data.student} grade={modal.data.grade} subjects={subjects} onClose={closeModal} />;
+                    case 'manageSavings':
+                        return <SavingsManagementModal key={index} onClose={closeModal} />;
+                    case 'aiWorksheet':
+                        return <AIWorksheetGeneratorModal key={index} onClose={closeModal} />;
+                    case 'classroomToolkit':
+                        return <ClassroomToolkitModal key={index} onClose={closeModal} />;
+                    case 'healthRecord':
+                        return <HealthRecordModal key={index} onClose={closeModal} />;
+                    default:
+                        return null;
+                }
+            })}
         </>
     );
 }

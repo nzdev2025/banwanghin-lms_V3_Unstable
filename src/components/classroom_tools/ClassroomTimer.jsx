@@ -1,8 +1,8 @@
-// src/components/classroom_tools/ClassroomTimer.jsx (v1.1 - Visually Perfected)
+// src/components/classroom_tools/ClassroomTimer.jsx (The "Scalable Timer" Version)
 import React, { useState, useEffect, useRef } from 'react';
 import Icon from '../../icons/Icon';
 
-const ClassroomTimer = () => {
+const ClassroomTimer = ({ isMaximized }) => { // รับ prop 'isMaximized'
     const [minutes, setMinutes] = useState(5);
     const [seconds, setSeconds] = useState(0);
     const [duration, setDuration] = useState(300);
@@ -10,7 +10,6 @@ const ClassroomTimer = () => {
     const [isActive, setIsActive] = useState(false);
     
     const intervalRef = useRef(null);
-    // Using a silent audio file to ensure playback on all browsers, you can replace the src
     const alarmAudioRef = useRef(new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg'));
 
     useEffect(() => {
@@ -70,16 +69,9 @@ const ClassroomTimer = () => {
 
     return (
         <div className="flex flex-col items-center justify-around h-full text-white">
-            <div className="relative w-72 h-72 flex items-center justify-center">
-                <svg className="absolute w-full h-full" viewBox="0 0 200 200">
-                    {/* Background Circle */}
-                    <circle 
-                        cx="100" cy="100" r={radius} 
-                        stroke="#374151" 
-                        strokeWidth={strokeWidth} 
-                        fill="transparent" 
-                    />
-                    {/* Progress Circle */}
+            <div className={`relative flex items-center justify-center transition-transform duration-300 ${isMaximized ? 'scale-125' : 'scale-100'}`}>
+                <svg className="w-72 h-72" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r={radius} stroke="#374151" strokeWidth={strokeWidth} fill="transparent" />
                     <circle 
                         cx="100" cy="100" r={radius} 
                         stroke="#f59e0b" 
@@ -92,8 +84,8 @@ const ClassroomTimer = () => {
                         style={{ transition: 'stroke-dashoffset 1s linear' }}
                     />
                 </svg>
-                <div className="z-10 text-center">
-                    <p className="font-mono text-6xl font-bold">{formatTime(timeLeft)}</p>
+                <div className="absolute z-10 text-center">
+                    <p className={`font-mono font-bold transition-all duration-300 ${isMaximized ? 'text-7xl' : 'text-6xl'}`}>{formatTime(timeLeft)}</p>
                 </div>
             </div>
 

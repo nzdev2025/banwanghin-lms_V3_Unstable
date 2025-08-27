@@ -1,4 +1,4 @@
-// src/components/classroom_tools/GroupGenerator.jsx
+// src/components/classroom_tools/GroupGenerator.jsx (The "Dynamic Grid" Version)
 import React from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db, appId } from '../../firebase/firebase';
@@ -15,7 +15,7 @@ const GroupGenerator = () => {
     React.useEffect(() => {
         if (!db || !selectedGrade) return;
         setIsLoading(true);
-        setGeneratedGroups([]); // Reset groups when grade changes
+        setGeneratedGroups([]);
         const rosterBasePath = `artifacts/${appId}/public/data/rosters/${selectedGrade}`;
         const q = query(collection(db, `${rosterBasePath}/students`), orderBy("studentNumber"));
         
@@ -30,7 +30,6 @@ const GroupGenerator = () => {
         return () => unsubscribe();
     }, [selectedGrade]);
     
-    // Fisher-Yates Shuffle Algorithm for true randomness
     const shuffleArray = (array) => {
         let currentIndex = array.length, randomIndex;
         while (currentIndex !== 0) {
@@ -43,20 +42,16 @@ const GroupGenerator = () => {
 
     const handleGenerateGroups = () => {
         if (students.length === 0 || numGroups <= 0) return;
-
         const shuffledStudents = shuffleArray([...students]);
         const newGroups = Array.from({ length: numGroups }, () => []);
-        
         shuffledStudents.forEach((student, index) => {
             newGroups[index % numGroups].push(student);
         });
-
         setGeneratedGroups(newGroups);
     };
 
     return (
         <div className="flex flex-col h-full">
-            {/* --- Controls Section --- */}
             <div className="flex-shrink-0 flex flex-wrap items-end justify-between gap-4 mb-6">
                  <div className="flex flex-wrap items-end gap-4">
                     <div>
@@ -70,33 +65,36 @@ const GroupGenerator = () => {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">จำนวนกลุ่มที่ต้องการ</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">จำนวนกลุ่ม</label>
                         <input 
                             type="number"
                             value={numGroups}
                             onChange={e => setNumGroups(Math.max(1, parseInt(e.target.value) || 1))}
                             min="1"
                             max={students.length || 1}
-                            className="bg-gray-700/50 border border-gray-600 rounded-lg p-2 text-white h-[42px] w-32"
+                            className="bg-gray-700/50 border border-gray-600 rounded-lg p-2 text-white h-[42px] w-24"
                         />
                     </div>
                 </div>
                 <button 
                     onClick={handleGenerateGroups}
                     disabled={students.length === 0}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:opacity-90 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-wait"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:opacity-90 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 disabled:opacity-50"
                 >
                     <Icon name="UsersRound" size={20}/>
                     สร้างกลุ่ม
                 </button>
             </div>
 
-            {/* --- Display Section --- */}
             <div className="flex-grow bg-gray-900/50 rounded-xl p-4 overflow-auto">
                  {isLoading ? (
                     <div className="flex items-center justify-center h-full"><Icon name="Loader2" className="animate-spin text-amber-400" size={48} /></div>
                 ) : generatedGroups.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    // --- 🚀 UPGRADE: ใช้ CSS Grid ที่ปรับคอลัมน์อัตโนมัติ ---
+                    <div 
+                        className="grid gap-4"
+                        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}
+                    >
                         {generatedGroups.map((group, index) => (
                             <div key={index} className="bg-gray-800/60 border border-white/10 rounded-lg p-3">
                                 <h4 className="font-bold text-amber-300 mb-2">กลุ่มที่ {index + 1}</h4>
