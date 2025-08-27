@@ -14,6 +14,7 @@ import AssignmentSystemCard from './components/shared/AssignmentSystemCard';
 import ClassroomToolkitCard from './components/shared/ClassroomToolkitCard';
 import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
 import AttendanceCard from './components/shared/AttendanceCard';
+import HealthCard from './components/shared/HealthCard'; // ++ 1. IMPORT
 import SubjectSelectionView from './components/modals/SubjectSelectionView';
 import GradeSelectionModal from './components/modals/GradeSelectionModal';
 import ClassDetailView from './components/modals/ClassDetailView';
@@ -25,6 +26,7 @@ import ClassroomToolkitModal from './components/modals/ClassroomToolkitModal';
 import AIWorksheetGeneratorModal from './components/modals/AIWorksheetGeneratorModal';
 import LineNotifySettingsModal from './components/modals/LineNotifySettingsModal';
 import AttendanceModal from './components/modals/AttendanceModal';
+import HealthRecordModal from './components/modals/HealthRecordModal'; // ++ 2. IMPORT
 
 function App() {
     const [user, setUser] = useState(null);
@@ -114,7 +116,8 @@ function App() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                                         <AttendanceCard onClick={() => setModal({ type: 'manageAttendance' })} />
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
-                                        <SavingsCard onClick={() => setModal({ type: 'manageSavings' })} />                                         
+                                        <SavingsCard onClick={() => setModal({ type: 'manageSavings' })} />
+                                        <HealthCard onClick={() => setModal({ type: 'healthRecord' })} /> {/* ++ 3. ADD CARD ++ */}
                                         <AIWorksheetFactoryCard onClick={() => setModal({ type: 'aiWorksheet' })} /> 
                                         <ClassroomToolkitCard onClick={() => setModal({ type: 'classroomToolkit' })} />
                                     </div>
@@ -147,6 +150,7 @@ function App() {
             {modal.type === 'manageSavings' && <SavingsManagementModal onClose={handleCloseModal} />}
             {modal.type === 'aiWorksheet' && <AIWorksheetGeneratorModal onClose={handleCloseModal} />}
             {modal.type === 'classroomToolkit' && <ClassroomToolkitModal onClose={handleCloseModal} />}
+            {modal.type === 'healthRecord' && <HealthRecordModal onClose={handleCloseModal} />} {/* ++ 4. ADD MODAL RENDER ++ */}
         </>
     );
 }
