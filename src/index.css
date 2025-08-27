@@ -1,4 +1,4 @@
-/* src/index.css (The Grand Finale Version) */
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,23 +16,18 @@
   @page {
     size: A4;
     margin: 2cm;
-
-    /* คำสั่งสำหรับซ่อน Header & Footer ที่ Browser สร้างขึ้น */
-    @top-left { content: '' }
-    @top-center { content: '' }
-    @top-right { content: '' }
-    @bottom-left { content: '' }
-    @bottom-center { content: '' }
-    @bottom-right { content: '' }
   }
 
   @media print {
     body {
       font-family: 'Sarabun', sans-serif;
+      color: black;
     }
 
-    /* --- เพิ่มโค้ด 4 บรรทัดนี้เข้าไป --- */
-    /* บังคับให้หัวกระดาษ (school-header) จัดกลางเสมอตอนพิมพ์ */
+    .print\:hidden {
+      display: none;
+    }
+
     .school-header {
       text-align: center !important;
     }
