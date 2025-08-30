@@ -1,4 +1,4 @@
-// src/App.jsx (The "Ultimate UX" Final Version with Stacked Modals & Toolkit Widget)
+// src/App.jsx (Upgraded with Developmental Assessment Feature)
 
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -15,6 +15,7 @@ import ClassroomToolkitCard from './components/shared/ClassroomToolkitCard';
 import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
 import AttendanceCard from './components/shared/AttendanceCard';
 import HealthCard from './components/shared/HealthCard';
+import DevelopmentalAssessmentCard from './components/shared/DevelopmentalAssessmentCard'; // <-- 1. IMPORT CARD ใหม่
 import SubjectSelectionView from './components/modals/SubjectSelectionView';
 import GradeSelectionModal from './components/modals/GradeSelectionModal';
 import ClassDetailView from './components/modals/ClassDetailView';
@@ -27,6 +28,7 @@ import AIWorksheetGeneratorModal from './components/modals/AIWorksheetGeneratorM
 import LineNotifySettingsModal from './components/modals/LineNotifySettingsModal';
 import AttendanceModal from './components/modals/AttendanceModal';
 import HealthRecordModal from './components/modals/HealthRecordModal';
+import DevelopmentalAssessmentModal from './components/modals/DevelopmentalAssessmentModal'; // <-- 2. IMPORT MODAL ใหม่
 
 function App() {
     const [user, setUser] = useState(null);
@@ -36,9 +38,7 @@ function App() {
     const [view, setView] = React.useState('dashboard');
     const [appId, setAppId] = React.useState('banwanghin-lms-dev');
 
-    // --- 🚀 UPGRADE #1: เปลี่ยน state จาก object เป็น array สำหรับ Modal Stack ---
     const [modalStack, setModalStack] = React.useState([]);
-    // --- 🚀 UPGRADE #2: เพิ่ม State สำหรับ Toolkit Widget ---
     const [isToolkitOpen, setIsToolkitOpen] = useState(false);
 
     useEffect(() => {
@@ -60,7 +60,6 @@ function App() {
         return () => unsubscribe();
     }, [appId, user]);
 
-    // --- ฟังก์ชันจัดการ Modal Stack ---
     const openModal = (type, data = null) => {
         setModalStack(prevStack => [...prevStack, { type, data }]);
     };
@@ -69,7 +68,6 @@ function App() {
         setModalStack(prevStack => prevStack.slice(0, prevStack.length - 1));
     };
     
-    // ส่งฟังก์ชัน openModal ไปแทน
     const handleStudentClick = (student, grade) => openModal('studentProfile', { student, grade });
 
     if (authLoading) {
@@ -86,7 +84,6 @@ function App() {
 
     return (
         <>
-            {/* --- Render Toolkit Widget แยกต่างหาก --- */}
             {isToolkitOpen && <ClassroomToolkitModal onClose={() => setIsToolkitOpen(false)} isWidget={true} />}
 
             {view === 'dashboard' && (
@@ -124,13 +121,14 @@ function App() {
                                 <OverallAnalytics subjects={subjects} />
                                 <div>
                                     <h2 className="text-2xl font-bold text-white mb-6">เครื่องมือหลัก (Main Tools)</h2>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                                    {/* --- 3. เพิ่ม CARD ใหม่เข้ามาใน Grid --- */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                                         <AttendanceCard onClick={() => openModal('manageAttendance')} />
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
                                         <SavingsCard onClick={() => openModal('manageSavings')} />
                                         <HealthCard onClick={() => openModal('healthRecord')} />
+                                        <DevelopmentalAssessmentCard onClick={() => openModal('developmentalAssessment')} />
                                         <AIWorksheetFactoryCard onClick={() => openModal('aiWorksheet')} /> 
-                                        {/* เปลี่ยน onClick ของ ClassroomToolkitCard */}
                                         <ClassroomToolkitCard onClick={() => setIsToolkitOpen(true)} />
                                     </div>
                                 </div>
@@ -151,7 +149,7 @@ function App() {
                 />
             )}
 
-            {/* Modal Container: Render Modal ตัวบนสุดของ Stack เท่านั้น */}
+            {/* --- 4. เพิ่ม CASE ใหม่สำหรับ MODAL ที่เราสร้าง --- */}
             {modalStack.map((modal, index) => {
                 if (index !== modalStack.length - 1) return null;
 
@@ -178,6 +176,8 @@ function App() {
                         return <ClassroomToolkitModal key={index} onClose={closeModal} />;
                     case 'healthRecord':
                         return <HealthRecordModal key={index} onClose={closeModal} />;
+                    case 'developmentalAssessment': // <-- CASE ใหม่
+                        return <DevelopmentalAssessmentModal key={index} onClose={closeModal} />;
                     default:
                         return null;
                 }
