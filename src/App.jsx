@@ -1,4 +1,4 @@
-// src/App.jsx (Upgraded with Developmental Assessment Feature)
+// src/App.jsx (Upgraded with Pp.5 Generator Feature)
 
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -15,7 +15,8 @@ import ClassroomToolkitCard from './components/shared/ClassroomToolkitCard';
 import AIWorksheetFactoryCard from './components/shared/AIWorksheetFactoryCard';
 import AttendanceCard from './components/shared/AttendanceCard';
 import HealthCard from './components/shared/HealthCard';
-import DevelopmentalAssessmentCard from './components/shared/DevelopmentalAssessmentCard'; // <-- 1. IMPORT CARD ใหม่
+import DevelopmentalAssessmentCard from './components/shared/DevelopmentalAssessmentCard';
+import Pp5Card from './components/shared/Pp5Card'; // <-- 1. IMPORT CARD ใหม่
 import SubjectSelectionView from './components/modals/SubjectSelectionView';
 import GradeSelectionModal from './components/modals/GradeSelectionModal';
 import ClassDetailView from './components/modals/ClassDetailView';
@@ -28,7 +29,9 @@ import AIWorksheetGeneratorModal from './components/modals/AIWorksheetGeneratorM
 import LineNotifySettingsModal from './components/modals/LineNotifySettingsModal';
 import AttendanceModal from './components/modals/AttendanceModal';
 import HealthRecordModal from './components/modals/HealthRecordModal';
-import DevelopmentalAssessmentModal from './components/modals/DevelopmentalAssessmentModal'; // <-- 2. IMPORT MODAL ใหม่
+import DevelopmentalAssessmentModal from './components/modals/DevelopmentalAssessmentModal';
+import Pp5GeneratorModal from './components/modals/Pp5GeneratorModal'; // <-- 2. IMPORT MODAL ใหม่
+
 
 function App() {
     const [user, setUser] = useState(null);
@@ -121,13 +124,13 @@ function App() {
                                 <OverallAnalytics subjects={subjects} />
                                 <div>
                                     <h2 className="text-2xl font-bold text-white mb-6">เครื่องมือหลัก (Main Tools)</h2>
-                                    {/* --- 3. เพิ่ม CARD ใหม่เข้ามาใน Grid --- */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-                                        <AttendanceCard onClick={() => openModal('manageAttendance')} />
                                         <AssignmentSystemCard onClick={() => setView('subjects')} subjectCount={subjects.length} />
                                         <SavingsCard onClick={() => openModal('manageSavings')} />
                                         <HealthCard onClick={() => openModal('healthRecord')} />
+                                        <AttendanceCard onClick={() => openModal('manageAttendance')} />
                                         <DevelopmentalAssessmentCard onClick={() => openModal('developmentalAssessment')} />
+                                        <Pp5Card onClick={() => openModal('pp5Generator')} /> {/* <-- 3. เพิ่ม CARD ใหม่เข้ามาใน Grid */}
                                         <AIWorksheetFactoryCard onClick={() => openModal('aiWorksheet')} /> 
                                         <ClassroomToolkitCard onClick={() => setIsToolkitOpen(true)} />
                                     </div>
@@ -149,7 +152,6 @@ function App() {
                 />
             )}
 
-            {/* --- 4. เพิ่ม CASE ใหม่สำหรับ MODAL ที่เราสร้าง --- */}
             {modalStack.map((modal, index) => {
                 if (index !== modalStack.length - 1) return null;
 
@@ -176,8 +178,10 @@ function App() {
                         return <ClassroomToolkitModal key={index} onClose={closeModal} />;
                     case 'healthRecord':
                         return <HealthRecordModal key={index} onClose={closeModal} />;
-                    case 'developmentalAssessment': // <-- CASE ใหม่
+                    case 'developmentalAssessment':
                         return <DevelopmentalAssessmentModal key={index} onClose={closeModal} />;
+                    case 'pp5Generator': // <-- 4. เพิ่ม CASE ใหม่สำหรับ MODAL ที่เราสร้าง
+                        return <Pp5GeneratorModal key={index} subjects={subjects} onClose={closeModal} />;
                     default:
                         return null;
                 }

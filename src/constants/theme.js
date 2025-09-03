@@ -8,7 +8,8 @@ export const colorThemes = {
     amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', shadow: 'hover:shadow-amber-500/20', text: 'text-amber-300', hex: '#f59e0b', glow: 'shadow-glow-amber' },
     lime: { bg: 'bg-lime-500/10', border: 'border-lime-500/30', shadow: 'hover:shadow-lime-500/20', text: 'text-lime-300', hex: '#84cc16', glow: 'shadow-glow-lime' },
     // Added emerald for Savings Card
-    emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', shadow: 'hover:shadow-emerald-500/20', text: 'text-emerald-300', hex: '#10b981', glow: 'shadow-glow-emerald'}
+    emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', shadow: 'hover:shadow-emerald-500/20', text: 'text-emerald-300', hex: '#10b981', glow: 'shadow-glow-emerald' },
+    blue: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', shadow: 'hover:shadow-blue-500/20', text: 'text-blue-300', hex: '#3b82f6', glow: 'shadow-glow-blue' }
 };
 
 export const gradeStyles = {
@@ -19,6 +20,8 @@ export const gradeStyles = {
     p5: { icon: 'SquareEqual', color: 'text-sky-400' },
     p6: { icon: 'SquareM', color: 'text-purple-400' },
 };
+
+
 
 export const analyticsCardStyles = [
     { gradient: 'from-purple-500/70 to-indigo-500/70', border: 'border-purple-400' },

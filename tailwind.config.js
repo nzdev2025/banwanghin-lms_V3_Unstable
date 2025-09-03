@@ -16,6 +16,7 @@ export default {
         'glow-amber': '0 0 20px -5px rgba(245, 158, 11, 0.4)',
         'glow-lime': '0 0 20px -5px rgba(132, 204, 22, 0.4)',
         'glow-emerald': '0 0 20px -5px rgba(16, 185, 129, 0.4)',
+      'glow-blue': '0 0 20px -5px rgba(59, 130, 246, 0.4)',
       }
     },
   },
